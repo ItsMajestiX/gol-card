@@ -1,24 +1,18 @@
 const rl = @import("raylib");
 const std = @import("std");
 
-// TODO: Replace the two tables with a 64 byte bitset with a nine bit key.
-const aliveTable = tableA: {
-    var table: [32]u8 = undefined;
+const stateTable = table: {
+    var table: [64]u8 = undefined;
     @memset(&table, 0);
-    for (0..256) |i| {
-        const neighborhood = (i & 1) + ((i >> 1) & 1) + ((i >> 2) & 1) + ((i >> 3) & 1) + ((i >> 4) & 1) + ((i >> 5) & 1) + ((i >> 6) & 1) + ((i >> 7) & 1);
-        table[i / 8] |= @as(u8, @intFromBool((neighborhood >= 2) and (neighborhood <= 3))) << @as(u3, i & 0x7);
+    for (0..512) |i| {
+        const neighborhood = (i & 1) + ((i >> 1) & 1) + ((i >> 2) & 1) + ((i >> 3) & 1) + ((i >> 5) & 1) + ((i >> 6) & 1) + ((i >> 7) & 1) + ((i >> 8) & 1);
+        if (((i >> 4) & 1) > 0) {
+            table[i / 8] |= @as(u8, @intFromBool((neighborhood >= 2) and (neighborhood <= 3))) << @as(u3, i & 0x7);
+        } else {
+            table[i / 8] |= @as(u8, @intFromBool(neighborhood == 3)) << @as(u3, i & 0x7);
+        }
     }
-    break :tableA table;
-};
-const deadTable = tableB: {
-    var table: [32]u8 = undefined;
-    @memset(&table, 0);
-    for (0..256) |i| {
-        const neighborhood = (i & 1) + ((i >> 1) & 1) + ((i >> 2) & 1) + ((i >> 3) & 1) + ((i >> 4) & 1) + ((i >> 5) & 1) + ((i >> 6) & 1) + ((i >> 7) & 1);
-        table[i / 8] |= @as(u8, @intFromBool(neighborhood == 3)) << @as(u3, i & 0x7);
-    }
-    break :tableB table;
+    break :table table;
 };
 
 pub fn bitmapGet(bm: []const u8, idx: usize) u8 {
@@ -63,78 +57,56 @@ test "getRow" {
     try std.testing.expect(sliceCompare(getRow(@constCast(&board), 0, 64), @constCast(board[0..])));
 }
 
-pub fn shiftInRight(lookup: u8, row: []const u8, top: []const u8, bottom: []const u8, col: usize) u8 {
+pub fn shiftInRight(lookup: u9, row: []const u8, top: []const u8, bottom: []const u8, col: usize) u9 {
     var newLookup = lookup;
     newLookup <<= 3;
-    newLookup = std.math.rotl(u8, newLookup, 1);
-    newLookup &= 0xF0;
-    newLookup |= (bitmapGet(row, col - 2) << 3);
-    newLookup |= (bitmapGet(row, col) << 2);
-    newLookup |= (bitmapGet(top, col) << 1);
+    newLookup |= (bitmapGet(top, col) << 2);
+    newLookup |= (bitmapGet(row, col) << 1);
     newLookup |= (bitmapGet(bottom, col));
-    newLookup = std.math.rotl(u8, newLookup, 2);
     return newLookup;
 }
 
-// test "shiftInRight" {
-//     const top: [1]u8 = .{0xAA}; // 01010101, because lsb is on left
-//     const mid: [1]u8 = .{0xBB}; // 11011101
-//     const bot: [1]u8 = .{0x33}; // 11001100
+test "shiftInRight" {
+    const top: [1]u8 = .{0xAA}; // 01010101, because lsb is on left
+    const mid: [1]u8 = .{0xBB}; // 11011101
+    const bot: [1]u8 = .{0x33}; // 11001100
 
-//     var currentLookup: u8 = 0;
-//     currentLookup = shiftInRight(currentLookup, &mid, &top, &bot, 1); // not 0, that causes an out of bounds
-//     try std.testing.expect(currentLookup == 0x3C); // 00111100
-//     currentLookup = shiftInRight(currentLookup, &mid, &top, &bot, 2);
-//     try std.testing.expect(currentLookup == 0x23); // 00100011
-//     currentLookup = shiftInRight(currentLookup, &mid, &top, &bot, 3);
-//     try std.testing.expect(currentLookup == 0xD8); // 11011000
-//     currentLookup = shiftInRight(currentLookup, &mid, &top, &bot, 4);
-//     try std.testing.expect(currentLookup == 0x36); // 00110110
-// }
-
-pub fn shiftInRightOverflow(lookup: u8, row: []const u8, top: []const u8, bottom: []const u8, col: comptime_int) u8 {
-    comptime {
-        std.debug.assert((col == 0) or (col == 1));
-    }
-    var newLookup = lookup;
-    newLookup <<= 3;
-    newLookup = std.math.rotl(u8, newLookup, 1);
-    newLookup &= 0xF0;
-    newLookup |= (bitmapGet(row, row.len * 8 - 2 + col) << 3);
-    newLookup |= (bitmapGet(row, 0) << 2);
-    newLookup |= (bitmapGet(top, 0) << 1);
-    newLookup |= (bitmapGet(bottom, 0));
-    newLookup = std.math.rotl(u8, newLookup, 2);
-    return newLookup;
+    var currentLookup: u9 = 0;
+    currentLookup = shiftInRight(currentLookup, &mid, &top, &bot, 0);
+    try std.testing.expect(currentLookup == 0x03); // 000 000 011
+    currentLookup = shiftInRight(currentLookup, &mid, &top, &bot, 1);
+    try std.testing.expect(currentLookup == 0x1F); // 000 011 111
+    currentLookup = shiftInRight(currentLookup, &mid, &top, &bot, 2);
+    try std.testing.expect(currentLookup == 0xF8); // 011 111 000
+    currentLookup = shiftInRight(currentLookup, &mid, &top, &bot, 3);
+    try std.testing.expect(currentLookup == 0x1C6); // 111 000 110
+    currentLookup = shiftInRight(currentLookup, &mid, &top, &bot, 4);
+    try std.testing.expect(currentLookup == 0x33); // 000 110 011
+    currentLookup = shiftInRight(currentLookup, &mid, &top, &bot, 5);
+    try std.testing.expect(currentLookup == 0x19F); // 110 011 111
+    currentLookup = shiftInRight(currentLookup, &mid, &top, &bot, 6);
+    try std.testing.expect(currentLookup == 0xF8); // 011 111 000
+    currentLookup = shiftInRight(currentLookup, &mid, &top, &bot, 7);
+    try std.testing.expect(currentLookup == 0x1C6); // 111 000 110
 }
 
-// test "shiftInRightOverflow" {
-//     const top: [1]u8 = .{0xAA}; // 01010101, because lsb is on left
-//     const mid: [1]u8 = .{0xBB}; // 11011101
-//     const bot: [1]u8 = .{0x33}; // 11001100
-
-//     var currentLookup: u8 = 0;
-//     currentLookup = shiftInRightOverflow(currentLookup, &mid, &top, &bot); // this function is designed to get index 0
-//     try std.testing.expect(currentLookup == 0x34); // 00110100
-// }
-
-pub fn stepRow(row: []u8, top: []u8, bottom: []u8, width: comptime_int) [width / 8]u8 {
+pub fn stepRow(row: []const u8, top: []const u8, bottom: []const u8, width: comptime_int) [width / 8]u8 {
     // set up variables
     var res: [width / 8]u8 = undefined;
     var currentByte: u8 = 0;
-    var lookupByte: u8 = 0;
+    var lookupByte: u9 = 0;
 
     // shift in the column on the other side of the board
     lookupByte = shiftInRight(lookupByte, row, top, bottom, width - 1);
     // shift in the column at index 0
-    lookupByte = shiftInRightOverflow(lookupByte, row, top, bottom, 0);
+    lookupByte = shiftInRight(lookupByte, row, top, bottom, 0);
     // shift in the column at index 1
-    lookupByte = shiftInRightOverflow(lookupByte, row, top, bottom, 1);
+    lookupByte = shiftInRight(lookupByte, row, top, bottom, 1);
     for (0..(width - 2)) |i| {
         // compute the new state of the cell at i
-        currentByte |= (if (bitmapGet(row, i) > 0) bitmapGet(&aliveTable, lookupByte) else bitmapGet(&deadTable, lookupByte)) << @truncate(i & 0x7);
+        currentByte |= bitmapGet(&stateTable, lookupByte) << @truncate(i & 0x7);
         // when we are full, add to the array and reset the storage
-        if (currentByte & 0x7 == 7) {
+        if (i & 0x7 == 7) {
             res[i / 8] = currentByte;
             currentByte = 0;
         }
@@ -142,13 +114,23 @@ pub fn stepRow(row: []u8, top: []u8, bottom: []u8, width: comptime_int) [width /
         lookupByte = shiftInRight(lookupByte, row, top, bottom, i + 2);
     }
     // compute the cell with the data currently in the lookup byte
-    currentByte |= (if (bitmapGet(row, width - 2) > 0) bitmapGet(&aliveTable, lookupByte) else bitmapGet(&deadTable, lookupByte)) << @truncate(width - 2 & 0x7);
+    currentByte |= bitmapGet(&stateTable, lookupByte) << 6;
     // last cell in the row, so loop around to the beginning
-    lookupByte = shiftInRightOverflow(lookupByte, row, top, bottom, 0);
-    currentByte |= (if (bitmapGet(row, width - 1) > 0) bitmapGet(&aliveTable, lookupByte) else bitmapGet(&deadTable, lookupByte)) << 7;
+    lookupByte = shiftInRight(lookupByte, row, top, bottom, 0);
+    currentByte |= bitmapGet(&stateTable, lookupByte) << 7;
     // since the width must be divisible by 8, we know that the last byte is ready
     res[res.len - 1] = currentByte;
     return res;
+}
+
+test "stepRow" {
+    const top: [1]u8 = .{0xAA}; // 01010101, because lsb is on left
+    const mid: [1]u8 = .{0xBB}; // 11011101
+    const bot: [1]u8 = .{0x33}; // 11001100
+
+    const test1 = stepRow(&mid, &top, &bot, 8);
+    const expected1: [1]u8 = .{0b10001000};
+    try std.testing.expect(std.mem.eql(u8, &test1, &expected1));
 }
 
 pub fn updateBoard(board: []u8, width: comptime_int, height: comptime_int) void {
