@@ -158,6 +158,27 @@ pub fn updateBoard(board: []u8, width: comptime_int, height: comptime_int) void 
     @memcpy(getRow(board, height - 1, width), &newRow); // do not need to save
 }
 
+test "updateBoard" {
+    var board1_t0: [8]u8 = .{ 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF }; // every cell should die due to overpopulation
+    const board1_t1: [8]u8 = .{ 0, 0, 0, 0, 0, 0, 0, 0 };
+    updateBoard(&board1_t0, 8, 8);
+    try std.testing.expect(std.mem.eql(u8, &board1_t0, &board1_t1));
+
+    var board2_t0: [8]u8 = .{ 0x70, 0x43, 0xAD, 0xAA, 0xF5, 0x8A, 0x74, 0x66 }; // we assume stepRow is reliable
+    const board2_t1: [8]u8 = .{
+        stepRow(board2_t0[0..1], board2_t0[7..8], board2_t0[1..2], 8)[0],
+        stepRow(board2_t0[1..2], board2_t0[0..1], board2_t0[2..3], 8)[0],
+        stepRow(board2_t0[2..3], board2_t0[1..2], board2_t0[3..4], 8)[0],
+        stepRow(board2_t0[3..4], board2_t0[2..3], board2_t0[4..5], 8)[0],
+        stepRow(board2_t0[4..5], board2_t0[3..4], board2_t0[5..6], 8)[0],
+        stepRow(board2_t0[5..6], board2_t0[4..5], board2_t0[6..7], 8)[0],
+        stepRow(board2_t0[6..7], board2_t0[5..6], board2_t0[7..8], 8)[0],
+        stepRow(board2_t0[7..8], board2_t0[6..7], board2_t0[0..1], 8)[0],
+    };
+    updateBoard(&board2_t0, 8, 8);
+    try std.testing.expect(std.mem.eql(u8, &board2_t0, &board2_t1));
+}
+
 pub fn main() anyerror!void {
     // size of board and window
     const width = 360;
