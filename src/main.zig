@@ -1,6 +1,7 @@
 const rl = @import("raylib");
 const std = @import("std");
 
+// TODO: Replace the two tables with a 64 byte bitset with a nine bit key.
 const aliveTable = tableA: {
     var table: [32]u8 = undefined;
     @memset(&table, 0);
@@ -133,7 +134,7 @@ pub fn stepRow(row: []u8, top: []u8, bottom: []u8, width: comptime_int) [width /
         // compute the new state of the cell at i
         currentByte |= (if (bitmapGet(row, i) > 0) bitmapGet(&aliveTable, lookupByte) else bitmapGet(&deadTable, lookupByte)) << @truncate(i & 0x7);
         // when we are full, add to the array and reset the storage
-        if (i & 0x7 == 7) {
+        if (currentByte & 0x7 == 7) {
             res[i / 8] = currentByte;
             currentByte = 0;
         }
@@ -188,16 +189,16 @@ pub fn main() anyerror!void {
 
     rl.setTargetFPS(60);
 
-    var field: [(width * height + 7) / 8]u8 = undefined;
+    var board: [(width * height + 7) / 8]u8 = undefined;
     var rng = std.rand.DefaultPrng.init(std.crypto.random.int(u64));
-    rng.fill(&field);
+    rng.fill(&board);
 
     var framebuffer: [width * height]u8 = undefined;
     @memset(&framebuffer, 0);
     const img = rl.Image{ .data = &framebuffer, .format = rl.PixelFormat.pixelformat_uncompressed_grayscale, .height = height, .width = width, .mipmaps = 1 };
     const texture = rl.loadTextureFromImage(img);
     for (0..(width * height)) |i| {
-        framebuffer[i] = (~bitmapGet(&field, i)) +% 1;
+        framebuffer[i] = (~bitmapGet(&board, i)) +% 1;
     }
     rl.updateTexture(texture, &framebuffer);
     while (!rl.windowShouldClose()) {
@@ -207,11 +208,11 @@ pub fn main() anyerror!void {
         rl.endDrawing();
         //if (rl.isKeyPressed(rl.KeyboardKey.key_e)) {
         const t0 = std.time.nanoTimestamp();
-        updateBoard(&field, width, height);
+        updateBoard(&board, width, height);
         const t1 = std.time.nanoTimestamp();
         std.debug.print("Tick took {d}ns.\n", .{t1 - t0});
         for (0..(width * height)) |i| {
-            framebuffer[i] = (~bitmapGet(&field, i)) +% 1;
+            framebuffer[i] = (~bitmapGet(&board, i)) +% 1;
         }
         rl.updateTexture(texture, &framebuffer);
         //}

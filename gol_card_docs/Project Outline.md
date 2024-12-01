@@ -1,6 +1,6 @@
 # Step 1: Create a Simulated Card on PC
-- [ ] Create a program that simulates Conway's Game of Life on a fixed sized board.
-- [ ] Random seeding of the initial state.
+- [x] Create a program that simulates Conway's Game of Life on a fixed sized board. ([[11-30-24]])
+- [x] Random seeding of the initial state. ([[11-30-24]])
 - [ ] Add various time scales, as well as step functionality.
 - [ ] Save the state to a file after each step, at first naively 
 - [ ] Investigate and implement methods to compress the state size between steps
