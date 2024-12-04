@@ -57,9 +57,10 @@ test "getRow" {
     try std.testing.expect(sliceCompare(getRow(@constCast(&board), 0, 64), @constCast(board[0..])));
 }
 
-pub fn shiftInRight(lookup: u9, row: []const u8, top: []const u8, bottom: []const u8, col: usize) u9 {
+pub fn shiftInRight(lookup: u16, row: []const u8, top: []const u8, bottom: []const u8, col: usize) u16 {
     var newLookup = lookup;
     newLookup <<= 3;
+    newLookup &= 0x1FF;
     newLookup |= (bitmapGet(top, col) << 2);
     newLookup |= (bitmapGet(row, col) << 1);
     newLookup |= (bitmapGet(bottom, col));
@@ -94,7 +95,7 @@ pub fn stepRow(row: []const u8, top: []const u8, bottom: []const u8, width: comp
     // set up variables
     var res: [width / 8]u8 = undefined;
     var currentByte: u8 = 0;
-    var lookupByte: u9 = 0;
+    var lookupByte: u16 = 0;
 
     // shift in the column on the other side of the board
     lookupByte = shiftInRight(lookupByte, row, top, bottom, width - 1);
@@ -210,10 +211,7 @@ pub fn main() anyerror!void {
         rl.drawTextureEx(texture, rl.Vector2.zero(), 0.0, 3.0, rl.Color.white);
         rl.endDrawing();
         //if (rl.isKeyPressed(rl.KeyboardKey.key_e)) {
-        const t0 = std.time.nanoTimestamp();
         updateBoard(&board, width, height);
-        const t1 = std.time.nanoTimestamp();
-        std.debug.print("Tick took {d}ns.\n", .{t1 - t0});
         for (0..(width * height)) |i| {
             framebuffer[i] = (~bitmapGet(&board, i)) +% 1;
         }
