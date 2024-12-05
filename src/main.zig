@@ -194,8 +194,27 @@ pub fn main() anyerror!void {
     rl.setTargetFPS(60);
 
     var board: [(width * height + 7) / 8]u8 = undefined;
-    var rng = std.rand.DefaultPrng.init(std.crypto.random.int(u64));
-    rng.fill(&board);
+    var fileHandle: std.fs.File = undefined;
+    fileHandle = std.fs.cwd().openFile("state.bin", std.fs.File.OpenFlags{ .mode = .read_write }) catch |err| handleErr: {
+        switch (err) {
+            error.FileNotFound => {
+                break :handleErr try std.fs.cwd().createFile("state.bin", std.fs.File.CreateFlags{ .read = true });
+            },
+            else => {
+                return err;
+            },
+        }
+    };
+    defer fileHandle.close();
+    const len = try fileHandle.getEndPos();
+    if (len != board.len) {
+        std.debug.print("file size {d} not equal to buffer, regenerating\n", .{len});
+        try fileHandle.setEndPos(0);
+        var rng = std.rand.DefaultPrng.init(std.crypto.random.int(u64));
+        rng.fill(&board);
+    } else {
+        _ = try fileHandle.readAll(&board);
+    }
 
     var framebuffer: [width * height]u8 = undefined;
     @memset(&framebuffer, 0);
@@ -251,4 +270,6 @@ pub fn main() anyerror!void {
             step = !step;
         }
     }
+    try fileHandle.seekTo(0);
+    try fileHandle.writeAll(&board);
 }
