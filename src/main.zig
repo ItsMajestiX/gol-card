@@ -205,17 +205,50 @@ pub fn main() anyerror!void {
         framebuffer[i] = (~bitmapGet(&board, i)) +% 1;
     }
     rl.updateTexture(texture, &framebuffer);
+
+    const times = [_]u16{ 1, 2, 3, 4, 5, 6, 10, 12, 15, 20, 30, 60, 2 * 60, 3 * 60, 5 * 60, 10 * 60, 15 * 60, 20 * 60, 30 * 60, 60 * 60, 120 * 60, 180 * 60, 300 * 60 };
+    var selectedTime: usize = 0;
+    var frameCount: u16 = 0;
+    var step = true;
     while (!rl.windowShouldClose()) {
+        if (step) {
+            if (rl.isKeyPressed(rl.KeyboardKey.key_e)) {
+                updateBoard(&board, width, height);
+                for (0..(width * height)) |i| {
+                    framebuffer[i] = (~bitmapGet(&board, i)) +% 1;
+                }
+                rl.updateTexture(texture, &framebuffer);
+            }
+        } else {
+            if (times[selectedTime] <= frameCount) {
+                frameCount = 0;
+                updateBoard(&board, width, height);
+                for (0..(width * height)) |i| {
+                    framebuffer[i] = (~bitmapGet(&board, i)) +% 1;
+                }
+                rl.updateTexture(texture, &framebuffer);
+            }
+        }
         rl.beginDrawing();
         //rl.drawTexture(texture, 0, 0, rl.Color.white);
         rl.drawTextureEx(texture, rl.Vector2.zero(), 0.0, 3.0, rl.Color.white);
         rl.endDrawing();
-        //if (rl.isKeyPressed(rl.KeyboardKey.key_e)) {
-        updateBoard(&board, width, height);
-        for (0..(width * height)) |i| {
-            framebuffer[i] = (~bitmapGet(&board, i)) +% 1;
+        if (rl.isKeyPressed(rl.KeyboardKey.key_w)) {
+            if (selectedTime < (times.len - 1)) {
+                selectedTime += 1;
+                std.debug.print("Time changed to {d} frame, {d} seconds\n", .{ times[selectedTime], times[selectedTime] / 60 });
+            }
+        } else if (rl.isKeyPressed(rl.KeyboardKey.key_q)) {
+            if (selectedTime > 0) {
+                selectedTime -= 1;
+                std.debug.print("Time changed to {d} frame, {d} seconds\n", .{ times[selectedTime], times[selectedTime] / 60 });
+            }
         }
-        rl.updateTexture(texture, &framebuffer);
-        //}
+        if (!step) {
+            frameCount += 1;
+        }
+        if (rl.isKeyPressed(rl.KeyboardKey.key_p)) {
+            step = !step;
+        }
     }
 }

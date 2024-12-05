@@ -20,23 +20,8 @@
               "icon": "lucide-file",
               "title": "Project Outline"
             }
-          },
-          {
-            "id": "2cb53a54188b335d",
-            "type": "leaf",
-            "state": {
-              "type": "markdown",
-              "state": {
-                "file": "daily/12-3-24.md",
-                "mode": "source",
-                "source": false
-              },
-              "icon": "lucide-file",
-              "title": "12-3-24"
-            }
           }
-        ],
-        "currentTab": 1
+        ]
       }
     ],
     "direction": "vertical"
@@ -175,16 +160,16 @@
       "command-palette:Open command palette": false
     }
   },
-  "active": "2cb53a54188b335d",
+  "active": "fea8700ccf6d1a77",
   "lastOpenFiles": [
+    "daily/12-3-24.md",
+    "Project Outline.md",
     "img/Pasted image 20241130232126.png",
     "img",
     "daily/11-30-24.md",
     "daily/11-27-24.md",
-    "Project Outline.md",
-    "11-27-24.md",
-    "daily/12-3-24.md",
     "daily",
+    "11-27-24.md",
     "Welcome.md"
   ]
 }
