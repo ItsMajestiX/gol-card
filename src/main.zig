@@ -194,8 +194,7 @@ pub fn main() anyerror!void {
     rl.setTargetFPS(60);
 
     var board: [(width * height + 7) / 8]u8 = undefined;
-    var fileHandle: std.fs.File = undefined;
-    fileHandle = std.fs.cwd().openFile("state.bin", std.fs.File.OpenFlags{ .mode = .read_write }) catch |err| handleErr: {
+    var fileHandle = std.fs.cwd().openFile("state.bin", std.fs.File.OpenFlags{ .mode = .read_write }) catch |err| handleErr: {
         switch (err) {
             error.FileNotFound => {
                 break :handleErr try std.fs.cwd().createFile("state.bin", std.fs.File.CreateFlags{ .read = true });
