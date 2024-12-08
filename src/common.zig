@@ -1,5 +1,5 @@
-const rl = @import("raylib");
-const std = @import("std");
+const hal = @import("./hal-desktop.zig");
+const bitmapGet = @import("./bitmapget.zig").bitmapGet;
 
 const stateTable = table: {
     var table: [64]u8 = undefined;
@@ -15,11 +15,8 @@ const stateTable = table: {
     break :table table;
 };
 
-pub fn bitmapGet(bm: []const u8, idx: usize) u8 {
-    return (bm[idx / 8] >> @truncate(idx & 0x7)) & 0x1;
-}
-
 test "bitmapGet" {
+    const std = @import("std");
     const bm: [2]u8 = .{ 0x11, 0x22 };
     try std.testing.expect(bitmapGet(&bm, 0) == 1); // 0x11 = 0b00010001
     try std.testing.expect(bitmapGet(&bm, 1) == 0);
@@ -31,11 +28,12 @@ test "bitmapGet" {
     try std.testing.expect(bitmapGet(&bm, 15) == 0);
 }
 
-pub fn getRow(board: []u8, row: usize, width: comptime_int) []u8 {
+fn getRow(board: []u8, row: usize, width: comptime_int) []u8 {
     return board[(width * row / 8)..(width * (row + 1) / 8)];
 }
 
 fn sliceCompare(a: []u8, b: []u8) bool {
+    const std = @import("std");
     if (a.len != b.len) {
         std.debug.print("a len: {d} != b len: {d}\n", .{ a.len, b.len });
         return false;
@@ -48,6 +46,7 @@ fn sliceCompare(a: []u8, b: []u8) bool {
 }
 
 test "getRow" {
+    const std = @import("std");
     const board: [8]u8 = .{ 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88 };
     try std.testing.expect(sliceCompare(getRow(@constCast(&board), 0, 8), @constCast(board[0..1])));
     try std.testing.expect(sliceCompare(getRow(@constCast(&board), 1, 8), @constCast(board[1..2])));
@@ -57,7 +56,7 @@ test "getRow" {
     try std.testing.expect(sliceCompare(getRow(@constCast(&board), 0, 64), @constCast(board[0..])));
 }
 
-pub fn shiftInRight(lookup: u16, row: []const u8, top: []const u8, bottom: []const u8, col: usize) u16 {
+fn shiftInRight(lookup: u16, row: []const u8, top: []const u8, bottom: []const u8, col: usize) u16 {
     var newLookup = lookup;
     newLookup <<= 3;
     newLookup &= 0x1FF;
@@ -68,6 +67,7 @@ pub fn shiftInRight(lookup: u16, row: []const u8, top: []const u8, bottom: []con
 }
 
 test "shiftInRight" {
+    const std = @import("std");
     const top: [1]u8 = .{0xAA}; // 01010101, because lsb is on left
     const mid: [1]u8 = .{0xBB}; // 11011101
     const bot: [1]u8 = .{0x33}; // 11001100
@@ -91,7 +91,7 @@ test "shiftInRight" {
     try std.testing.expect(currentLookup == 0x1C6); // 111 000 110
 }
 
-pub fn stepRow(row: []const u8, top: []const u8, bottom: []const u8, width: comptime_int) [width / 8]u8 {
+fn stepRow(row: []const u8, top: []const u8, bottom: []const u8, width: comptime_int) [width / 8]u8 {
     // set up variables
     var res: [width / 8]u8 = undefined;
     var currentByte: u8 = 0;
@@ -125,6 +125,7 @@ pub fn stepRow(row: []const u8, top: []const u8, bottom: []const u8, width: comp
 }
 
 test "stepRow" {
+    const std = @import("std");
     const top: [1]u8 = .{0xAA}; // 01010101, because lsb is on left
     const mid: [1]u8 = .{0xBB}; // 11011101
     const bot: [1]u8 = .{0x33}; // 11001100
@@ -134,7 +135,7 @@ test "stepRow" {
     try std.testing.expect(std.mem.eql(u8, &test1, &expected1));
 }
 
-pub fn updateBoard(board: []u8, width: comptime_int, height: comptime_int) void {
+fn updateBoard(board: []u8, width: comptime_int, height: comptime_int) void {
     var row0: [width / 8]u8 = undefined;
     @memcpy(&row0, getRow(board, 0, width));
 
@@ -145,21 +146,25 @@ pub fn updateBoard(board: []u8, width: comptime_int, height: comptime_int) void 
 
     for (0..(height - 2)) |i| {
         const newRow = stepRow(middleRow, &topRow, bottomRow, width);
+        hal.sendRow(&newRow);
         @memcpy(&topRow, middleRow);
         @memcpy(getRow(board, i, width), &newRow);
         middleRow = bottomRow;
         bottomRow = getRow(board, (i + 2), width);
     }
     var newRow = stepRow(middleRow, &topRow, bottomRow, width); // remove from loop to avoid branch
+    hal.sendRow(&newRow);
     @memcpy(&topRow, middleRow);
     @memcpy(getRow(board, height - 2, width), &newRow);
     middleRow = bottomRow;
     bottomRow = &row0; // wrap around
     newRow = stepRow(middleRow, &topRow, bottomRow, width);
+    hal.sendRow(&newRow);
     @memcpy(getRow(board, height - 1, width), &newRow); // do not need to save
 }
 
 test "updateBoard" {
+    const std = @import("std");
     var board1_t0: [8]u8 = .{ 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF }; // every cell should die due to overpopulation
     const board1_t1: [8]u8 = .{ 0, 0, 0, 0, 0, 0, 0, 0 };
     updateBoard(&board1_t0, 8, 8);
@@ -180,95 +185,10 @@ test "updateBoard" {
     try std.testing.expect(std.mem.eql(u8, &board2_t0, &board2_t1));
 }
 
-pub fn main() anyerror!void {
-    // size of board and window
-    const width = 360;
-    comptime {
-        std.debug.assert(width % 8 == 0); // this makes copying rows much easier
-    }
-    const height = 240;
-
-    rl.initWindow(width * 3, height * 3, "Game of Life Card Simulator");
-    defer rl.closeWindow();
-
-    rl.setTargetFPS(60);
-
-    var board: [(width * height + 7) / 8]u8 = undefined;
-    var fileHandle = std.fs.cwd().openFile("state.bin", std.fs.File.OpenFlags{ .mode = .read_write }) catch |err| handleErr: {
-        switch (err) {
-            error.FileNotFound => {
-                break :handleErr try std.fs.cwd().createFile("state.bin", std.fs.File.CreateFlags{ .read = true });
-            },
-            else => {
-                return err;
-            },
-        }
-    };
-    defer fileHandle.close();
-    const len = try fileHandle.getEndPos();
-    if (len != board.len) {
-        std.debug.print("file size {d} not equal to buffer, regenerating\n", .{len});
-        try fileHandle.setEndPos(0);
-        var rng = std.rand.DefaultPrng.init(std.crypto.random.int(u64));
-        rng.fill(&board);
-    } else {
-        _ = try fileHandle.readAll(&board);
-    }
-
-    var framebuffer: [width * height]u8 = undefined;
-    @memset(&framebuffer, 0);
-    const img = rl.Image{ .data = &framebuffer, .format = rl.PixelFormat.pixelformat_uncompressed_grayscale, .height = height, .width = width, .mipmaps = 1 };
-    const texture = rl.loadTextureFromImage(img);
-    for (0..(width * height)) |i| {
-        framebuffer[i] = (~bitmapGet(&board, i)) +% 1;
-    }
-    rl.updateTexture(texture, &framebuffer);
-
-    const times = [_]u16{ 1, 2, 3, 4, 5, 6, 10, 12, 15, 20, 30, 60, 2 * 60, 3 * 60, 5 * 60, 10 * 60, 15 * 60, 20 * 60, 30 * 60, 60 * 60, 120 * 60, 180 * 60, 300 * 60 };
-    var selectedTime: usize = 0;
-    var frameCount: u16 = 0;
-    var step = true;
-    while (!rl.windowShouldClose()) {
-        if (step) {
-            if (rl.isKeyPressed(rl.KeyboardKey.key_e)) {
-                updateBoard(&board, width, height);
-                for (0..(width * height)) |i| {
-                    framebuffer[i] = (~bitmapGet(&board, i)) +% 1;
-                }
-                rl.updateTexture(texture, &framebuffer);
-            }
-        } else {
-            if (times[selectedTime] <= frameCount) {
-                frameCount = 0;
-                updateBoard(&board, width, height);
-                for (0..(width * height)) |i| {
-                    framebuffer[i] = (~bitmapGet(&board, i)) +% 1;
-                }
-                rl.updateTexture(texture, &framebuffer);
-            }
-        }
-        rl.beginDrawing();
-        //rl.drawTexture(texture, 0, 0, rl.Color.white);
-        rl.drawTextureEx(texture, rl.Vector2.zero(), 0.0, 3.0, rl.Color.white);
-        rl.endDrawing();
-        if (rl.isKeyPressed(rl.KeyboardKey.key_w)) {
-            if (selectedTime < (times.len - 1)) {
-                selectedTime += 1;
-                std.debug.print("Time changed to {d} frame, {d} seconds\n", .{ times[selectedTime], times[selectedTime] / 60 });
-            }
-        } else if (rl.isKeyPressed(rl.KeyboardKey.key_q)) {
-            if (selectedTime > 0) {
-                selectedTime -= 1;
-                std.debug.print("Time changed to {d} frame, {d} seconds\n", .{ times[selectedTime], times[selectedTime] / 60 });
-            }
-        }
-        if (!step) {
-            frameCount += 1;
-        }
-        if (rl.isKeyPressed(rl.KeyboardKey.key_p)) {
-            step = !step;
-        }
-    }
-    try fileHandle.seekTo(0);
-    try fileHandle.writeAll(&board);
+pub fn step() void {
+    hal.initDisplay();
+    defer hal.closeDisplay();
+    const board: []u8 = hal.loadBoard();
+    defer hal.saveBoard(board);
+    updateBoard(board, hal.width, hal.height);
 }

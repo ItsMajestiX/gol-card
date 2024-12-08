@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "daily/12-7-24.md",
+                "file": "Project Outline.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "12-7-24"
+              "title": "Project Outline"
             }
           }
         ]
@@ -162,8 +162,8 @@
   },
   "active": "fea8700ccf6d1a77",
   "lastOpenFiles": [
-    "Project Outline.md",
     "daily/12-7-24.md",
+    "Project Outline.md",
     "img/Pasted image 20241130232126.png",
     "daily/12-3-24.md",
     "img",
