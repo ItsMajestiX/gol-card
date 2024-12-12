@@ -13,10 +13,13 @@ pub fn main() anyerror!void {
     var frameCount: u16 = 0;
     var step = true;
     hal.initDisplay(); // these functions make much more sense in the context of an eInk display
-    const board = hal.loadBoard(); // hack to make inital state appear, will not happen on actual hardware (eInk is persistent)
+
+    // hack to make inital state appear, will not happen on actual hardware (eInk is persistent)
+    const board = hal.loadBoard();
     for (0..hal.height) |i| {
         hal.sendRow(board[(i * hal.width / 8)..((i + 1) * hal.width / 8)]);
     }
+
     while (!rl.windowShouldClose()) {
         rl.beginDrawing();
         defer rl.endDrawing();
