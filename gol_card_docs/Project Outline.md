@@ -7,6 +7,7 @@
 - [ ] Break off state save/load into a HAL
 - [ ] Break off display interaction into a HAL
 - [ ] Separate a single state update into a function that can be called either on msp430 or by the simulator
+- [ ] Create a build process for the MSP430.
 when this step is done, the step function should contain no I/O except through the HAL
 # Step 2: Hardware Prototyping
 - [ ] Based on the simulator, choose an appropriate MSP430 processor

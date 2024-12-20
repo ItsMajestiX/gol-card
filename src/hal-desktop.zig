@@ -23,7 +23,7 @@ pub fn closeDisplay() void {
 }
 var row_idx: u32 = 0;
 comptime {
-    std.debug.assert((1 << @typeInfo(@TypeOf(row_idx)).Int.bits) >= height);
+    std.debug.assert((1 << @typeInfo(@TypeOf(row_idx)).int.bits) >= height);
 }
 pub fn sendRow(row: []const u8) void {
     for (0..(row.len * 8)) |i| {
@@ -53,7 +53,7 @@ pub fn loadBoard() []u8 {
         if (len != board_arr.len) {
             std.debug.print("file size {d} not equal to buffer, regenerating\n", .{len});
             fileHandle.?.setEndPos(0) catch unreachable;
-            var rng = std.rand.DefaultPrng.init(std.crypto.random.int(u64));
+            var rng = std.Random.DefaultPrng.init(std.crypto.random.int(u64));
             rng.fill(&board_arr);
         } else {
             _ = fileHandle.?.readAll(&board_arr) catch unreachable;

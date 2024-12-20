@@ -3,3 +3,5 @@ zig-out
 .vscode
 state.bin
 zig-master
+msp430-gcc*
+gol_card.o
