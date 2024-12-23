@@ -1,4 +1,5 @@
-const hal = @import("./hal-desktop.zig");
+const builtin = @import("builtin");
+const hal = if (builtin.cpu.arch == .msp430) @import("./hal-embedded.zig") else @import("./hal-desktop.zig");
 const bitmapGet = @import("./bitmapget.zig").bitmapGet;
 
 const stateTable = table: {

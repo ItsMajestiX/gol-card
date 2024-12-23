@@ -1,6 +1,6 @@
+const hal = @import("./hal-embedded.zig");
+const common = @import("./common.zig");
+
 pub export fn main() void {
-    const a: *volatile u16 = @ptrFromInt(0x1234);
-    a.* = 5;
-    a.* *= 2;
-    a.* -= 3;
+    common.step();
 }
