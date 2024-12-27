@@ -4,17 +4,17 @@
 - [x] Add various time scales, as well as step functionality. ([[12-7-24]])
 - [x] Save the state to a file after each step, at first naively.  ([[12-7-24]])
 - [x] Investigate and implement methods to compress the state size between steps. ([[12-7-24]])
-- [ ] Break off state save/load into a HAL
-- [ ] Break off display interaction into a HAL
-- [ ] Separate a single state update into a function that can be called either on msp430 or by the simulator
+- [x] ~~Break off state save/load into a HAL. [12-14-24]~~
+- [x] ~~Break off display interaction into a HAL. [12-14-24]~~
+- [x] ~~Separate a single state update into a function that can be called either on msp430 or by the simulator. [12-14-24]~~
 - [ ] Create a build process for the MSP430.
 when this step is done, the step function should contain no I/O except through the HAL
 # Step 2: Hardware Prototyping
 - [ ] Based on the simulator, choose an appropriate MSP430 processor
 	- MSP430FR2433, has 16kB (bytes)
 - [ ] Constrain the simulator to run within the amount of memory the processor has
-- [ ] Produce MSP430 assembly from the program
-- [ ] Order necessary parts
+- [x] ~~Produce MSP430 assembly from the program. [12-22-24]~~
+- [x] ~~Order necessary parts. [12-22-24]~~
 - [ ] Set up bootstrap code for MSP430
 - [ ] Implement sending/recieving data (state, display)
 - [ ] Move state to hardware

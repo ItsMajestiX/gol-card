@@ -29,7 +29,7 @@ pub fn sendRow(row: []const u8) void {
     for (0..(row.len * 8)) |i| {
         framebuffer[width * row_idx + i] = ~bitmapGet(row, i) +% 1;
     }
-    row_idx += 1;
+    row_idx +%= 1;
     if (row_idx == height) {
         row_idx = 0;
     }

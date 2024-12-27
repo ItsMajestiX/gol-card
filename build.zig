@@ -52,8 +52,8 @@ pub fn build(b: *std.Build) void {
         .target = target_msp430,
         .optimize = optimize_msp430,
     });
-    var genFile = std.Build.GeneratedFile{ .step = &build_object.step };
-    build_object.generated_asm = &genFile;
+    // var genFile = std.Build.GeneratedFile{ .step = &build_object.step };
+    // build_object.generated_asm = &genFile;
 
     const install_asm = b.addInstallFile(build_object.getEmittedAsm(), "gol_card.s");
     install_asm.step.dependOn(&build_object.step);
