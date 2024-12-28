@@ -1,4 +1,60 @@
 const std = @import("std");
+const builtin = @import("builtin");
+
+fn checkFileHash(path: []const u8, out: *[std.crypto.hash.Md5.digest_length]u8) !void {
+    const buf: [8192]u8 = undefined;
+    const file = try std.fs.cwd().openFile(path, .{});
+    var hash = std.crypto.hash.Md5.init(.{});
+    while (true) {
+        const len = try file.read(buf);
+        if (len == 0) break;
+        hash.update(buf[0..len]);
+    }
+    hash.final(out);
+}
+// Create a step that will download and install TI's tools for MSP430 if available for the current platform.
+fn createInstallToolchain(b: *std.Build) !std.Build.Step {
+
+    // Build the appropriate package name based on builtin (works at comptime)
+    const os_str = comptime switch (builtin.os.tag) {
+        .windows => "win",
+        .macos, .linux => |value| @tagName(value),
+        else => {
+            @panic("Unsupported operating system for TI toolchain.");
+        },
+    };
+    const arch_str = comptime if (builtin.os.tag == .macos) "" else switch (builtin.cpu.arch) {
+        .x86_64, .aarch64 => "64",
+        .x86, .arm => "32",
+        else => @panic("Unsupported architecture for TI toolchain."),
+    };
+    const archive_str = comptime switch (builtin.os.tag) {
+        .windows => "zip",
+        .macos, .linux => "tar.bz2",
+        else => unreachable,
+    };
+    const root_name = std.fmt.comptimePrint("msp430-gcc-9.3.1.11_{s}{s}", .{ os_str, arch_str });
+
+    // Now in runtime, while building tree, check if paths exist
+    const bin_exists = blk: {
+        const root_path = std.fmt.comptimePrint("./{s}", .{root_name});
+        std.fs.cwd().access(root_path, .{}) catch break :blk false;
+        break :blk true;
+    };
+    const link_exists = bin_exists and blk: {
+        const chips = [_][]const u8{ "msp430fr2433", "msp430fr2475", "msp430fr2476" };
+        inline for (chips) |chip| {
+            const path_main_ld = std.fmt.comptimePrint("./{s}/include/{s}.ld", .{ root_name, chip });
+            std.fs.cwd().access(path_main_ld, .{}) catch break :blk false;
+            const path_symbol_ld = std.fmt.comptimePrint("./{s}/include/{s}_symbols.ld", .{ root_name, chip });
+            std.fs.cwd().access(path_symbol_ld, .{}) catch break :blk false;
+        }
+        break :blk true;
+    };
+
+    // If we are missing things, check if we have an archive to pull from
+
+}
 
 // Although this function looks imperative, note that its job is to
 // declaratively construct a build graph that will be executed by an external
@@ -6,15 +62,7 @@ const std = @import("std");
 pub fn build(b: *std.Build) void {
     // options for desktop build
 
-    // Standard target options allows the person running `zig build` to choose
-    // what target to build for. Here we do not override the defaults, which
-    // means any target is allowed, and the default is native. Other options
-    // for restricting supported target set are available.
     const target_desktop = b.standardTargetOptions(.{});
-
-    // Standard optimization options allow the person running `zig build` to select
-    // between Debug, ReleaseSafe, ReleaseFast, and ReleaseSmall. Here we do not
-    // set a preferred release mode, allowing the user to decide how to optimize.
     const optimize_desktop = b.standardOptimizeOption(.{});
 
     const raylib_dep = b.dependency("raylib-zig", .{
@@ -34,32 +82,7 @@ pub fn build(b: *std.Build) void {
     exe.linkLibrary(raylib_artifact);
     exe.root_module.addImport("raylib", raylib);
 
-    // This declares intent for the executable to be installed into the
-    // standard location when the user invokes the "install" step (the default
-    // step when running `zig build`).
     b.installArtifact(exe);
-
-    // options for MSP430 build
-    const target_msp430_query = std.Target.Query.parse(std.Target.Query.ParseOptions{
-        .arch_os_abi = "msp430-freestanding",
-        .cpu_features = "msp430+hwmult32",
-    }) catch unreachable;
-    const target_msp430 = b.resolveTargetQuery(target_msp430_query);
-    const optimize_msp430 = std.builtin.OptimizeMode.ReleaseSmall;
-    const build_object = b.addObject(std.Build.ObjectOptions{
-        .name = "gol_card",
-        .root_source_file = b.path("src/main-embedded.zig"),
-        .target = target_msp430,
-        .optimize = optimize_msp430,
-    });
-    // var genFile = std.Build.GeneratedFile{ .step = &build_object.step };
-    // build_object.generated_asm = &genFile;
-
-    const install_asm = b.addInstallFile(build_object.getEmittedAsm(), "gol_card.s");
-    install_asm.step.dependOn(&build_object.step);
-
-    const build_embedded = b.step("build-embedded", "aaaa");
-    build_embedded.dependOn(&install_asm.step);
 
     // This *creates* a Run step in the build graph, to be executed when another
     // step is evaluated that depends on it. The next line below will establish
@@ -97,4 +120,29 @@ pub fn build(b: *std.Build) void {
     // running the unit tests.
     const test_step = b.step("test", "Run unit tests");
     test_step.dependOn(&run_exe_unit_tests.step);
+
+    // options for MSP430 build
+
+    const target_msp430_query = std.Target.Query.parse(std.Target.Query.ParseOptions{
+        .arch_os_abi = "msp430-freestanding",
+        .cpu_features = "msp430+hwmult32",
+    }) catch unreachable;
+    const target_msp430 = b.resolveTargetQuery(target_msp430_query);
+    const optimize_msp430 = std.builtin.OptimizeMode.ReleaseSmall;
+    const build_object = b.addObject(std.Build.ObjectOptions{
+        .name = "gol_card",
+        .root_source_file = b.path("src/main-embedded.zig"),
+        .target = target_msp430,
+        .optimize = optimize_msp430,
+    });
+    // var genFile = std.Build.GeneratedFile{ .step = &build_object.step };
+    // build_object.generated_asm = &genFile;
+
+    const install_asm = b.addInstallFile(build_object.getEmittedAsm(), "gol_card.s");
+    install_asm.step.dependOn(&build_object.step);
+
+    const build_embedded = b.step("build-embedded", "aaaa");
+    build_embedded.dependOn(&install_asm.step);
+
+    // Toolchain management
 }
