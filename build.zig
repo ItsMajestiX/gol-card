@@ -332,7 +332,8 @@ pub fn build(b: *std.Build) !void {
     const msp = createInstallDeployToolchain(b, &target_desktop, &optimize_desktop);
 
     const msp_install = b.addInstallArtifact(msp, .{});
-    const msp_run = b.addRunArtifact(msp_install.artifact);
+    const msp_run = b.addRunArtifact(msp);
     const msp_step = b.step("mspdebug", "Run mspdebug.");
     msp_step.dependOn(&msp_run.step);
+    msp_step.dependOn(&msp_install.step);
 }
