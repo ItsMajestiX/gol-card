@@ -24,6 +24,10 @@
     // internet connectivity.
     .dependencies = .{
         .@"raylib-zig" = .{ .path = "./raylib-zig" },
+        .mspdebug = .{
+            .url = "https://github.com/dlbeer/mspdebug/archive/985b390ba22f4229aeca9f02e273a54eb4a76a9a.zip",
+            .hash = "122081939c130ca554bac0f4ad7d9cdc68ca81a97338b12c44daa8f8ec94ce696981",
+        },
     },
     .paths = .{
         "build.zig",
