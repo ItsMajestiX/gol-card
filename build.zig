@@ -233,7 +233,6 @@ fn createInstallDeployToolchain(b: *std.Build, target: *const std.Build.Resolved
 
     mspdebug.linkLibC();
     mspdebug.linkSystemLibrary("usb");
-    mspdebug.linkSystemLibrary("udev");
 
     return mspdebug;
 }
@@ -336,4 +335,16 @@ pub fn build(b: *std.Build) !void {
     const msp_step = b.step("mspdebug", "Run mspdebug.");
     msp_step.dependOn(&msp_run.step);
     msp_step.dependOn(&msp_install.step);
+
+    const dl = b.addExecutable(.{
+        .name = "downloader",
+        .optimize = optimize_desktop,
+        .root_source_file = b.path("./downloader.zig"),
+        .target = target_desktop,
+    });
+    const run_dl = b.addRunArtifact(dl);
+    run_dl.addArg("https://ziglang.org/download/index.json");
+    run_dl.step.dependOn(&dl.step);
+    const run_dl_step = b.step("dl", "Test out the downloader.");
+    run_dl_step.dependOn(&run_dl.step);
 }
