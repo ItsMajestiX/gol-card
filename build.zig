@@ -276,12 +276,6 @@ pub fn build(b: *std.Build) !void {
     // files, this ensures they will be present and in the expected location.
     run_cmd.step.dependOn(b.getInstallStep());
 
-    // This allows the user to pass arguments to the application in the build
-    // command itself, like this: `zig build run -- arg1 arg2 etc`
-    if (b.args) |args| {
-        run_cmd.addArgs(args);
-    }
-
     // This creates a build step. It will be visible in the `zig build --help` menu,
     // and can be selected like this: `zig build run`
     // This will evaluate the `run` step rather than the default, which is "install".
@@ -342,9 +336,17 @@ pub fn build(b: *std.Build) !void {
         .root_source_file = b.path("./downloader.zig"),
         .target = target_desktop,
     });
+    b.installArtifact(dl);
     const run_dl = b.addRunArtifact(dl);
     run_dl.addArg("https://ziglang.org/download/index.json");
     run_dl.step.dependOn(&dl.step);
     const run_dl_step = b.step("dl", "Test out the downloader.");
     run_dl_step.dependOn(&run_dl.step);
+
+    // This allows the user to pass arguments to the application in the build
+    // command itself, like this: `zig build run -- arg1 arg2 etc`
+    if (b.args) |args| {
+        run_cmd.addArgs(args);
+        msp_run.addArgs(args);
+    }
 }
