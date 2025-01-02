@@ -7,3 +7,4 @@ msp430-gcc*
 gol_card.o
 binutils*
 E-Paper_code
+gol_card.s

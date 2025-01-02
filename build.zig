@@ -1,6 +1,7 @@
 const std = @import("std");
 const builtin = @import("builtin");
 
+/// Converts a single ASCII character in a hexadecimal string into its value.
 fn hexCharToValue(c: u8) u8 {
     return switch (c) {
         '0'...'9' => c - 0x30, // ASCII '0'
@@ -14,6 +15,8 @@ fn hexCharToValue(c: u8) u8 {
     };
 }
 
+/// Converts a hexadecimal string into an array of u8.
+/// `hexToArray("ff0510") = [255, 5, 16]`
 fn hexToArray(comptime s: []const u8) [s.len / 2]u8 {
     comptime {
         std.debug.assert(s.len != 0);
@@ -26,6 +29,7 @@ fn hexToArray(comptime s: []const u8) [s.len / 2]u8 {
     }
 }
 
+/// Given a file path, checks if the file matches a provided MD5 hash.
 fn checkFileHash(path: []const u8, out: *[std.crypto.hash.Md5.digest_length]u8) !void {
     var buf: [8192]u8 = undefined;
     const file = try std.fs.cwd().openFile(path, .{});
@@ -38,9 +42,8 @@ fn checkFileHash(path: []const u8, out: *[std.crypto.hash.Md5.digest_length]u8) 
     hash.final(out);
 }
 
-// Create a step that will download and install TI's tools for MSP430 if available for the current platform.
-fn createInstallBuildToolchain(b: *std.Build) !?void {
-    _ = b;
+/// Returns a step that will download and install TI's tools for MSP430 if available for the current platform.
+fn createInstallBuildToolchain(b: *std.Build, target: *const std.Build.ResolvedTarget, optimize: *const std.builtin.OptimizeMode) !?*std.Build.Step {
     // Build the appropriate package name based on builtin (works at comptime)
     const os_str = comptime switch (builtin.os.tag) {
         .windows => "win",
@@ -83,11 +86,13 @@ fn createInstallBuildToolchain(b: *std.Build) !?void {
         break :blk true;
     };
 
-    // If we are missing things, check if we have an archive to pull from
+    // If we are missing things, check if we have a reliable archive to pull from
     const need_download_bin: bool = if (bin_exists) false else blk: {
+        // Compare checksums
         var chk_buf: [std.crypto.hash.Md5.digest_length]u8 = undefined;
         const bin_path = std.fmt.comptimePrint("./{s}.{s}", .{ root_name, archive_str });
-        const target = comptime switch (builtin.os.tag) {
+        // Target will be set to the appropriate hash at comptime
+        const target_hash = comptime switch (builtin.os.tag) {
             .windows => switch (builtin.cpu.arch) {
                 .x86 => hexToArray("b8cebdeeced0299f741c9008f604c625"),
                 else => hexToArray("88e052336145c0feda62f9dd09ccfeb0"),
@@ -99,25 +104,68 @@ fn createInstallBuildToolchain(b: *std.Build) !?void {
             },
             else => unreachable,
         };
+        // If the file isn't found, download it.
         checkFileHash(bin_path, &chk_buf) catch |err| switch (err) {
             std.fs.File.OpenError.FileNotFound => break :blk true,
             else => return err,
         };
-        break :blk !std.mem.eql(u8, &target, &chk_buf);
+        if (std.mem.eql(u8, &target_hash, &chk_buf)) {
+            // If the hashes match, don't redownload.
+            break :blk false;
+        } else {
+            // If not, the file is corrupt. Delete it and redownload.
+            try std.fs.cwd().deleteFile(bin_path);
+            break :blk true;
+        }
     };
     const need_download_link: bool = if (link_exists) false else blk: {
+        // Mostly the same as above.
         var chk_buf: [std.crypto.hash.Md5.digest_length]u8 = undefined;
-        const target = comptime hexToArray("1f316453879c0cdea3a83e152eac69c1");
+        const target_hash = comptime hexToArray("1f316453879c0cdea3a83e152eac69c1");
         checkFileHash("./msp430-gcc-support-files-1.212.zip", &chk_buf) catch |err| switch (err) {
             std.fs.File.OpenError.FileNotFound => break :blk true,
             else => return err,
         };
-        break :blk !std.mem.eql(u8, &target, &chk_buf);
+        if (std.mem.eql(u8, &target_hash, &chk_buf)) {
+            break :blk false;
+        } else {
+            try std.fs.cwd().deleteFile("./msp430-gcc-support-files-1.212.zip");
+            break :blk true;
+        }
     };
-    _ = need_download_bin;
-    _ = need_download_link;
+
+    // Start building the step we will return to be attached to the rest of the tree.
+    var last_step: ?*std.Build.Step = null;
+
+    // If we need to download something, build the downloader
+    if (need_download_bin or need_download_link) {
+        const dl = b.addExecutable(.{
+            .name = "downloader",
+            .optimize = optimize.*,
+            .root_source_file = b.path("./downloader.zig"),
+            .target = target.*,
+        });
+        if (need_download_bin) {
+            const dl_bin = b.addRunArtifact(dl);
+            dl_bin.addArg(std.fmt.comptimePrint("https://dr-download.ti.com/software-development/ide-configuration-compiler-or-debugger/MD-LlCjWuAbzH/9.3.1.2/{s}.{s}", .{ root_name, archive_str }));
+            if (last_step != null) {
+                dl_bin.step.dependOn(last_step.?);
+            }
+            last_step = &dl_bin.step;
+        }
+        if (need_download_link) {
+            const dl_link = b.addRunArtifact(dl);
+            dl_link.addArg("https://dr-download.ti.com/software-development/ide-configuration-compiler-or-debugger/MD-LlCjWuAbzH/9.3.1.2/msp430-gcc-support-files-1.212.zip");
+            if (last_step != null) {
+                dl_link.step.dependOn(last_step.?);
+            }
+            last_step = &dl_link.step;
+        }
+    }
+    return last_step;
 }
 
+/// Returns a step that compiles MSPDebug for the current platform (ideally).
 fn createInstallDeployToolchain(b: *std.Build, target: *const std.Build.ResolvedTarget, optimize: *const std.builtin.OptimizeMode) *std.Build.Step.Compile {
     //const libusb_dep = b.dependency("libusb", .{});
 
@@ -242,7 +290,6 @@ fn createInstallDeployToolchain(b: *std.Build, target: *const std.Build.Resolved
 // runner.
 pub fn build(b: *std.Build) !void {
     // options for desktop build
-
     const target_desktop = b.standardTargetOptions(.{});
     const optimize_desktop = b.standardOptimizeOption(.{});
 
@@ -297,7 +344,6 @@ pub fn build(b: *std.Build) !void {
     test_step.dependOn(&run_exe_unit_tests.step);
 
     // options for MSP430 build
-
     const target_msp430_query = std.Target.Query.parse(std.Target.Query.ParseOptions{
         .arch_os_abi = "msp430-freestanding",
         .cpu_features = "msp430+hwmult32",
@@ -316,12 +362,18 @@ pub fn build(b: *std.Build) !void {
     const install_asm = b.addInstallFile(build_object.getEmittedAsm(), "gol_card.s");
     install_asm.step.dependOn(&build_object.step);
 
-    const build_embedded = b.step("build-embedded", "aaaa");
+    const build_embedded = b.step("build-embedded", "Build the assembly for the MSP430.");
     build_embedded.dependOn(&install_asm.step);
 
     // Toolchain management
-    _ = try createInstallBuildToolchain(b);
+    // Build toolchain
+    const maybe_toolchain = try createInstallBuildToolchain(b, &target_desktop, &optimize_desktop);
+    if (maybe_toolchain != null) {
+        const run_tc = b.step("install-build-toolchain", "Download and extract files needed to build for the MSP430.");
+        run_tc.dependOn(maybe_toolchain.?);
+    }
 
+    // Deploy toolchain
     const msp = createInstallDeployToolchain(b, &target_desktop, &optimize_desktop);
 
     const msp_install = b.addInstallArtifact(msp, .{});
@@ -329,19 +381,6 @@ pub fn build(b: *std.Build) !void {
     const msp_step = b.step("mspdebug", "Run mspdebug.");
     msp_step.dependOn(&msp_run.step);
     msp_step.dependOn(&msp_install.step);
-
-    const dl = b.addExecutable(.{
-        .name = "downloader",
-        .optimize = optimize_desktop,
-        .root_source_file = b.path("./downloader.zig"),
-        .target = target_desktop,
-    });
-    b.installArtifact(dl);
-    const run_dl = b.addRunArtifact(dl);
-    run_dl.addArg("https://ziglang.org/download/index.json");
-    run_dl.step.dependOn(&dl.step);
-    const run_dl_step = b.step("dl", "Test out the downloader.");
-    run_dl_step.dependOn(&run_dl.step);
 
     // This allows the user to pass arguments to the application in the build
     // command itself, like this: `zig build run -- arg1 arg2 etc`
