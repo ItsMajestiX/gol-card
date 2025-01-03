@@ -42,6 +42,18 @@ fn checkFileHash(path: []const u8, out: *[std.crypto.hash.Md5.digest_length]u8) 
     hash.final(out);
 }
 
+fn decompressZipFull(path: []const u8) !void {
+    const file = try std.fs.cwd().openFile(path, .{});
+    try std.zip.extract(std.fs.cwd(), file.seekableStream(), .{});
+}
+
+fn decompressZipPartial(path: []const u8, subdir: []const u8, comptime files: anytype) !void {
+    const custom_zip = @import("./custom-zip.zig");
+    const file = try std.fs.cwd().openFile(path, .{});
+    const dir = try std.fs.cwd().openDir(subdir, .{});
+    try custom_zip.extract(dir, file.seekableStream(), files);
+}
+
 /// Returns a step that will download and install TI's tools for MSP430 if available for the current platform.
 fn createInstallBuildToolchain(b: *std.Build, target: *const std.Build.ResolvedTarget, optimize: *const std.builtin.OptimizeMode) !?*std.Build.Step {
     // Build the appropriate package name based on builtin (works at comptime)
@@ -289,6 +301,7 @@ fn createInstallDeployToolchain(b: *std.Build, target: *const std.Build.Resolved
 // declaratively construct a build graph that will be executed by an external
 // runner.
 pub fn build(b: *std.Build) !void {
+    try decompressZipPartial("./msp430-gcc-support-files-1.212.zip", .{"msp430-gcc-support-files/include/rf430frl154h_symbols.ld"});
     // options for desktop build
     const target_desktop = b.standardTargetOptions(.{});
     const optimize_desktop = b.standardOptimizeOption(.{});
