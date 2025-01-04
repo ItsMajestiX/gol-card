@@ -51,7 +51,7 @@ pub fn loadBoard() []u8 {
         };
         const len = fileHandle.?.getEndPos() catch unreachable;
         if (len != board_arr.len) {
-            std.debug.print("file size {d} not equal to buffer, regenerating\n", .{len});
+            std.log.warn("File size {d} not equal to buffer, regenerating\n", .{len});
             fileHandle.?.setEndPos(0) catch unreachable;
             var rng = std.Random.DefaultPrng.init(std.crypto.random.int(u64));
             rng.fill(&board_arr);

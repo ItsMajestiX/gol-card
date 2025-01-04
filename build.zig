@@ -42,18 +42,6 @@ fn checkFileHash(path: []const u8, out: *[std.crypto.hash.Md5.digest_length]u8) 
     hash.final(out);
 }
 
-fn decompressZipFull(path: []const u8) !void {
-    const file = try std.fs.cwd().openFile(path, .{});
-    try std.zip.extract(std.fs.cwd(), file.seekableStream(), .{});
-}
-
-fn decompressZipPartial(path: []const u8, subdir: []const u8, comptime files: anytype) !void {
-    const custom_zip = @import("./custom-zip.zig");
-    const file = try std.fs.cwd().openFile(path, .{});
-    const dir = try std.fs.cwd().openDir(subdir, .{});
-    try custom_zip.extract(dir, file.seekableStream(), files);
-}
-
 /// Returns a step that will download and install TI's tools for MSP430 if available for the current platform.
 fn createInstallBuildToolchain(b: *std.Build, target: *const std.Build.ResolvedTarget, optimize: *const std.builtin.OptimizeMode) !?*std.Build.Step {
     // Build the appropriate package name based on builtin (works at comptime)
@@ -87,8 +75,9 @@ fn createInstallBuildToolchain(b: *std.Build, target: *const std.Build.ResolvedT
         std.fs.cwd().access(root_path, .{}) catch break :blk false;
         break :blk true;
     };
+    const chips = [_][]const u8{ "msp430fr2433", "msp430fr2475", "msp430fr2476" };
+
     const link_exists = bin_exists and blk: {
-        const chips = [_][]const u8{ "msp430fr2433", "msp430fr2475", "msp430fr2476" };
         inline for (chips) |chip| {
             const path_main_ld = std.fmt.comptimePrint("./{s}/include/{s}.ld", .{ root_name, chip });
             std.fs.cwd().access(path_main_ld, .{}) catch break :blk false;
@@ -154,25 +143,99 @@ fn createInstallBuildToolchain(b: *std.Build, target: *const std.Build.ResolvedT
         const dl = b.addExecutable(.{
             .name = "downloader",
             .optimize = optimize.*,
-            .root_source_file = b.path("./downloader.zig"),
+            .root_source_file = b.path("./src/build/downloader.zig"),
             .target = target.*,
         });
         if (need_download_bin) {
             const dl_bin = b.addRunArtifact(dl);
             dl_bin.addArg(std.fmt.comptimePrint("https://dr-download.ti.com/software-development/ide-configuration-compiler-or-debugger/MD-LlCjWuAbzH/9.3.1.2/{s}.{s}", .{ root_name, archive_str }));
-            if (last_step != null) {
-                dl_bin.step.dependOn(last_step.?);
+            if (last_step) |ls| {
+                dl_bin.step.dependOn(ls);
             }
             last_step = &dl_bin.step;
         }
         if (need_download_link) {
             const dl_link = b.addRunArtifact(dl);
             dl_link.addArg("https://dr-download.ti.com/software-development/ide-configuration-compiler-or-debugger/MD-LlCjWuAbzH/9.3.1.2/msp430-gcc-support-files-1.212.zip");
-            if (last_step != null) {
-                dl_link.step.dependOn(last_step.?);
+            if (last_step) |ls| {
+                dl_link.step.dependOn(ls);
             }
             last_step = &dl_link.step;
         }
+    }
+
+    if (!bin_exists) {
+        switch (builtin.os.tag) {
+            .macos, .linux => {
+                // Set up the run step
+                const untar = b.addSystemCommand(&[_][]const u8{ "tar", "-xf" });
+                untar.has_side_effects = true;
+
+                const archive = std.fmt.allocPrint(b.allocator, "./{s}.tar.bz2", .{root_name}) catch @panic("OOM");
+                untar.addArg(archive);
+
+                if (last_step) |ls| {
+                    untar.step.dependOn(ls);
+                }
+                last_step = &untar.step;
+            },
+            .windows => {
+                const UnzipStep = @import("./src/build/UnzipStep.zig");
+                const unzip = UnzipStep.createAll(b, std.fmt.comptimePrint("./{s}.zip", .{root_name}));
+                if (last_step) |ls| {
+                    unzip.step.dependOn(ls);
+                }
+                last_step = &unzip.step;
+            },
+            else => unreachable,
+        }
+    }
+
+    if (!link_exists) {
+        // If the bin directory doesn't exist yet, checking for files would result in an error.
+        // A lazy path must be used to work around this.
+        const dir_str = std.fmt.comptimePrint("./{s}/include", .{root_name});
+        const lazy_dir = b.path(dir_str);
+
+        const neededFiles: [][]const u8 = blk: {
+            const list = b.allocator.create([6][]const u8) catch @panic("OOM");
+            if (bin_exists) {
+                // The directory exists, so we can open it and tes
+                var idx: usize = 0;
+                var dir = try std.fs.cwd().openDir(std.fmt.comptimePrint("./{s}/include", .{root_name}), .{});
+                defer dir.close();
+                inline for (chips) |chip| {
+                    dir.access(std.fmt.comptimePrint("./{s}.ld", .{chip}), .{}) catch |err| switch (err) {
+                        error.FileNotFound => {
+                            list[idx] = std.fmt.comptimePrint("msp430-gcc-support-files/include/{s}.ld", .{chip});
+                            idx += 1;
+                        },
+                        else => return err,
+                    };
+                    dir.access(std.fmt.comptimePrint("./{s}_symbols.ld", .{chip}), .{}) catch |err| switch (err) {
+                        error.FileNotFound => {
+                            list[idx] = std.fmt.comptimePrint("msp430-gcc-support-files/include/{s}_symbols.ld", .{chip});
+                            idx += 1;
+                        },
+                        else => return err,
+                    };
+                }
+                break :blk list[0..idx];
+            } else {
+                // The directory does not exist, extract everything
+                inline for (chips, 0..) |chip, i| {
+                    list[i * 2] = std.fmt.comptimePrint("msp430-gcc-support-files/include/{s}.ld", .{chip});
+                    list[i * 2 + 1] = std.fmt.comptimePrint("msp430-gcc-support-files/include/{s}_symbols.ld", .{chip});
+                }
+                break :blk list;
+            }
+        };
+        const UnzipStep = @import("./src/build/UnzipStep.zig");
+        const unzip = UnzipStep.createFiles(b, "./msp430-gcc-support-files-1.212.zip", lazy_dir, neededFiles);
+        if (last_step) |ls| {
+            unzip.step.dependOn(ls);
+        }
+        last_step = &unzip.step;
     }
     return last_step;
 }
@@ -301,7 +364,6 @@ fn createInstallDeployToolchain(b: *std.Build, target: *const std.Build.Resolved
 // declaratively construct a build graph that will be executed by an external
 // runner.
 pub fn build(b: *std.Build) !void {
-    try decompressZipPartial("./msp430-gcc-support-files-1.212.zip", .{"msp430-gcc-support-files/include/rf430frl154h_symbols.ld"});
     // options for desktop build
     const target_desktop = b.standardTargetOptions(.{});
     const optimize_desktop = b.standardOptimizeOption(.{});
@@ -381,9 +443,9 @@ pub fn build(b: *std.Build) !void {
     // Toolchain management
     // Build toolchain
     const maybe_toolchain = try createInstallBuildToolchain(b, &target_desktop, &optimize_desktop);
-    if (maybe_toolchain != null) {
+    if (maybe_toolchain) |toolchain| {
         const run_tc = b.step("install-build-toolchain", "Download and extract files needed to build for the MSP430.");
-        run_tc.dependOn(maybe_toolchain.?);
+        run_tc.dependOn(toolchain);
     }
 
     // Deploy toolchain

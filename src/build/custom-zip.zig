@@ -271,7 +271,7 @@ pub fn Iterator(comptime SeekableStream: type) type {
                 options: std.zip.ExtractOptions,
                 filename_buf: []u8,
                 dest: std.fs.Dir,
-                comptime files: anytype,
+                files: []const []const u8,
             ) !u32 {
                 if (filename_buf.len < self.filename_len)
                     return error.ZipInsufficientBuffer;
@@ -328,7 +328,7 @@ pub fn Iterator(comptime SeekableStream: type) type {
 
                 // Only continue if the file is in the list
                 blk: {
-                    inline for (files) |value| {
+                    for (files) |value| {
                         if (std.mem.eql(u8, filename, value)) {
                             break :blk;
                         }
@@ -388,7 +388,7 @@ fn filenameInRoot(filename: []const u8, root: []const u8) bool {
 /// Note that `seekable_stream` must be an instance of `std.io.SeekabkeStream` and
 /// its context must also have a `.reader()` method that returns an instance of
 /// `std.io.Reader`.
-pub fn extract(dest: std.fs.Dir, seekable_stream: anytype, comptime files: anytype) !void {
+pub fn extract(dest: std.fs.Dir, seekable_stream: anytype, files: anytype) !void {
     const SeekableStream = @TypeOf(seekable_stream);
     var iter = try Iterator(SeekableStream).init(seekable_stream);
 

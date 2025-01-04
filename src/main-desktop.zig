@@ -37,12 +37,12 @@ pub fn main() anyerror!void {
         if (rl.isKeyPressed(rl.KeyboardKey.key_w)) {
             if (selectedTime < (times.len - 1)) {
                 selectedTime += 1;
-                std.debug.print("Time changed to {d} frame, {d} seconds\n", .{ times[selectedTime], times[selectedTime] / 60 });
+                std.log.info("Time changed to {d} frame, {d} seconds\n", .{ times[selectedTime], times[selectedTime] / 60 });
             }
         } else if (rl.isKeyPressed(rl.KeyboardKey.key_q)) {
             if (selectedTime > 0) {
                 selectedTime -= 1;
-                std.debug.print("Time changed to {d} frame, {d} seconds\n", .{ times[selectedTime], times[selectedTime] / 60 });
+                std.log.info("Time changed to {d} frame, {d} seconds\n", .{ times[selectedTime], times[selectedTime] / 60 });
             }
         }
         if (!step) {
