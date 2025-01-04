@@ -1,6 +1,12 @@
 const std = @import("std");
 const builtin = @import("builtin");
 
+const MCUType = enum {
+    msp430fr2433,
+    msp430fr2475,
+    msp430fr2476,
+};
+
 /// Converts a single ASCII character in a hexadecimal string into its value.
 fn hexCharToValue(c: u8) u8 {
     return switch (c) {
@@ -169,9 +175,10 @@ fn createInstallBuildToolchain(b: *std.Build, target: *const std.Build.ResolvedT
             .macos, .linux => {
                 // Set up the run step
                 const untar = b.addSystemCommand(&[_][]const u8{ "tar", "-xf" });
-                untar.has_side_effects = true;
+                untar.has_side_effects = false;
 
                 const archive = std.fmt.allocPrint(b.allocator, "./{s}.tar.bz2", .{root_name}) catch @panic("OOM");
+                //TODO: This may be able to take advantage of the caching system
                 untar.addArg(archive);
 
                 if (last_step) |ls| {
@@ -434,19 +441,36 @@ pub fn build(b: *std.Build) !void {
     // var genFile = std.Build.GeneratedFile{ .step = &build_object.step };
     // build_object.generated_asm = &genFile;
 
-    const install_asm = b.addInstallFile(build_object.getEmittedAsm(), "gol_card.s");
-    install_asm.step.dependOn(&build_object.step);
+    // Remove CFI directives
+    // Note: If you are changing this file, you will probably need to delete your .zig-cache.
+    // This does not play nice with the caching system, but once it works it works.
+    const RemoveCFIStep = @import("./src/build/RemoveCFIStep.zig");
+    const remove = RemoveCFIStep.create(b, build_object.getEmittedAsm());
+    remove.step.dependOn(&build_object.step);
 
-    const build_embedded = b.step("build-embedded", "Build the assembly for the MSP430.");
-    build_embedded.dependOn(&install_asm.step);
+    const install_asm = b.addInstallFile(build_object.getEmittedAsm(), "gol_card.s");
+    install_asm.step.dependOn(&remove.step);
+
+    const build_asm = b.step("msp430-asm", "Build the assembly for the MSP430.");
+    build_asm.dependOn(&install_asm.step);
 
     // Toolchain management
-    // Build toolchain
+    // Build toolchainxedFileArg("", lp: std.Build.LazyPath)
     const maybe_toolchain = try createInstallBuildToolchain(b, &target_desktop, &optimize_desktop);
-    if (maybe_toolchain) |toolchain| {
-        const run_tc = b.step("install-build-toolchain", "Download and extract files needed to build for the MSP430.");
-        run_tc.dependOn(toolchain);
+    const mcu = b.option(MCUType, "mmcu", "The MCU to build for. This adjust the linker scripts. Default ???") orelse MCUType.msp430fr2433;
+
+    const gcc_args = [_][]const u8{ "./msp430-gcc-9.3.1.11_linux64/bin/msp430-elf-gcc", "-L=./msp430-gcc-9.3.1.11_linux64/include", "-g", "-ogol_card.elf" };
+    const gcc_embedded = b.addSystemCommand(&gcc_args);
+    gcc_embedded.has_side_effects = false;
+    gcc_embedded.addArg(std.fmt.allocPrint(b.allocator, "-mmcu={s}", .{@tagName(mcu)}) catch @panic("OOM"));
+    gcc_embedded.addFileArg(build_object.getEmittedAsm());
+    if (maybe_toolchain) |tc| {
+        gcc_embedded.step.dependOn(tc);
     }
+    gcc_embedded.step.dependOn(&install_asm.step);
+
+    const build_embedded = b.step("msp430", "Builds the binary for the MSP430.");
+    build_embedded.dependOn(&gcc_embedded.step);
 
     // Deploy toolchain
     const msp = createInstallDeployToolchain(b, &target_desktop, &optimize_desktop);
