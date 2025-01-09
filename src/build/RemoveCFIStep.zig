@@ -88,7 +88,7 @@ fn make(step: *std.Build.Step, opt: std.Build.Step.MakeOptions) anyerror!void {
             }
         }
     }
-    // Chop off the unsued part of the file
+    // Chop off the unused part of the file
     try file.setEndPos(write_idx);
 }
 
