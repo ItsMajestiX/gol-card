@@ -1,6 +1,10 @@
 const builtin = @import("builtin");
 const hal = if (builtin.cpu.arch == .msp430) @import("./hal-embedded.zig") else @import("./hal-desktop.zig");
-const bitmapGet = @import("./bitmapget.zig").bitmapGet;
+const bitmapGet = @import("./bmutil.zig").bitmapGet;
+const getRow = @import("./bmutil.zig").getRow;
+const width = @import("./state.zig").State.width;
+const height = @import("./state.zig").State.height;
+const std = @import("std");
 
 const stateTable = table: {
     var table: [64]u8 = undefined;
@@ -17,7 +21,6 @@ const stateTable = table: {
 };
 
 test "bitmapGet" {
-    const std = @import("std");
     const bm: [2]u8 = .{ 0x11, 0x22 };
     try std.testing.expect(bitmapGet(&bm, 0) == 1); // 0x11 = 0b00010001
     try std.testing.expect(bitmapGet(&bm, 1) == 0);
@@ -29,12 +32,7 @@ test "bitmapGet" {
     try std.testing.expect(bitmapGet(&bm, 15) == 0);
 }
 
-fn getRow(board: []u8, row: usize, width: comptime_int) []u8 {
-    return board[(width * row / 8)..(width * (row + 1) / 8)];
-}
-
 fn sliceCompare(a: []u8, b: []u8) bool {
-    const std = @import("std");
     if (a.len != b.len) {
         std.debug.print("a len: {d} != b len: {d}\n", .{ a.len, b.len });
         return false;
@@ -47,7 +45,6 @@ fn sliceCompare(a: []u8, b: []u8) bool {
 }
 
 test "getRow" {
-    const std = @import("std");
     const board: [8]u8 = .{ 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88 };
     try std.testing.expect(sliceCompare(getRow(@constCast(&board), 0, 8), @constCast(board[0..1])));
     try std.testing.expect(sliceCompare(getRow(@constCast(&board), 1, 8), @constCast(board[1..2])));
@@ -68,7 +65,6 @@ fn shiftInRight(lookup: u16, row: []const u8, top: []const u8, bottom: []const u
 }
 
 test "shiftInRight" {
-    const std = @import("std");
     const top: [1]u8 = .{0xAA}; // 01010101, because lsb is on left
     const mid: [1]u8 = .{0xBB}; // 11011101
     const bot: [1]u8 = .{0x33}; // 11001100
@@ -92,7 +88,7 @@ test "shiftInRight" {
     try std.testing.expect(currentLookup == 0x1C6); // 111 000 110
 }
 
-fn stepRow(row: []const u8, top: []const u8, bottom: []const u8, width: comptime_int) [width / 8]u8 {
+fn stepRow(row: []const u8, top: []const u8, bottom: []const u8) [width / 8]u8 {
     // set up variables
     var res: [width / 8]u8 = undefined;
     var currentByte: u8 = 0;
@@ -109,6 +105,7 @@ fn stepRow(row: []const u8, top: []const u8, bottom: []const u8, width: comptime
         currentByte |= bitmapGet(&stateTable, lookupByte) << @truncate(i & 0x7);
         // when we are full, add to the array and reset the storage
         if (i & 0x7 == 7) {
+            hal.newByte(currentByte);
             res[i / 8] = currentByte;
             currentByte = 0;
         }
@@ -126,7 +123,6 @@ fn stepRow(row: []const u8, top: []const u8, bottom: []const u8, width: comptime
 }
 
 test "stepRow" {
-    const std = @import("std");
     const top: [1]u8 = .{0xAA}; // 01010101, because lsb is on left
     const mid: [1]u8 = .{0xBB}; // 11011101
     const bot: [1]u8 = .{0x33}; // 11001100
@@ -136,7 +132,7 @@ test "stepRow" {
     try std.testing.expect(std.mem.eql(u8, &test1, &expected1));
 }
 
-fn updateBoard(board: []u8, width: comptime_int, height: comptime_int) void {
+fn updateBoard(board: []u8) void {
     var row0: [width / 8]u8 = undefined;
     @memcpy(&row0, getRow(board, 0, width));
 
@@ -146,26 +142,25 @@ fn updateBoard(board: []u8, width: comptime_int, height: comptime_int) void {
     var bottomRow: []u8 = getRow(board, 1, width);
 
     for (0..(height - 2)) |i| {
-        const newRow = stepRow(middleRow, &topRow, bottomRow, width);
-        hal.sendRow(&newRow);
+        const newRow = stepRow(middleRow, &topRow, bottomRow);
         @memcpy(&topRow, middleRow);
         @memcpy(getRow(board, i, width), &newRow);
+        hal.markComplete(i);
         middleRow = bottomRow;
         bottomRow = getRow(board, (i + 2), width);
     }
-    var newRow = stepRow(middleRow, &topRow, bottomRow, width); // remove from loop to avoid branch
-    hal.sendRow(&newRow);
+    var newRow = stepRow(middleRow, &topRow, bottomRow); // remove from loop to avoid branch
     @memcpy(&topRow, middleRow);
     @memcpy(getRow(board, height - 2, width), &newRow);
+    hal.markComplete(height - 2);
     middleRow = bottomRow;
     bottomRow = &row0; // wrap around
-    newRow = stepRow(middleRow, &topRow, bottomRow, width);
-    hal.sendRow(&newRow);
+    newRow = stepRow(middleRow, &topRow, bottomRow);
     @memcpy(getRow(board, height - 1, width), &newRow); // do not need to save
+    hal.markComplete(height - 1);
 }
 
 test "updateBoard" {
-    const std = @import("std");
     var board1_t0: [8]u8 = .{ 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF }; // every cell should die due to overpopulation
     const board1_t1: [8]u8 = .{ 0, 0, 0, 0, 0, 0, 0, 0 };
     updateBoard(&board1_t0, 8, 8);
@@ -186,10 +181,41 @@ test "updateBoard" {
     try std.testing.expect(std.mem.eql(u8, &board2_t0, &board2_t1));
 }
 
+fn randomizeBoard(board: []u8) void {
+    const seed: [4]u64 = hal.getSeed();
+    var rng = std.Random.Xoshiro256{ .s = seed };
+    rng.fill(board);
+    hal.markAllComplete();
+}
+
 pub fn step() void {
-    hal.initDisplay();
-    defer hal.closeDisplay();
-    const board: []u8 = hal.loadBoard();
-    defer hal.saveBoard(board);
-    updateBoard(board, hal.width, hal.height);
+    const state = hal.preUpdate();
+    // hal.initDisplay();
+    // defer hal.closeDisplay();
+    //const board: []u8 = hal.loadBoard();
+    //defer hal.saveBoard(board);
+    if (state.reset_next) {
+        randomizeBoard(&state.board);
+        state.reset_next = false;
+        state.step_count = 0;
+    } else {
+        state.step_count += 1;
+        const max_steps = 4032; // two weeks
+        updateBoard(&state.board);
+        state.reset_next = (state.step_count >= max_steps) or blk: {
+            const current_crc = hal.getCRC();
+            for (state.past_crc) |past_crc| {
+                if (past_crc == current_crc) {
+                    break :blk true;
+                }
+            }
+            state.past_crc[state.crc_idx] = current_crc;
+            state.crc_idx += 1;
+            if (state.crc_idx >= state.past_crc.len) {
+                state.crc_idx = 0;
+            }
+            break :blk false;
+        };
+    }
+    hal.postUpdate();
 }
