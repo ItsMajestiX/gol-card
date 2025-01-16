@@ -11,11 +11,13 @@ file: std.Build.LazyPath,
 
 fn make(step: *std.Build.Step, opt: std.Build.Step.MakeOptions) anyerror!void {
     const self: *RemoveCFIStep = @fieldParentPtr("step", step);
+    var src = try std.fs.openFileAbsolute(self.file.getPath2(step.owner, step), .{ .mode = .read_only });
+    defer src.close();
 
-    var file = try std.fs.openFileAbsolute(self.file.getPath2(step.owner, step), .{ .mode = .read_write });
-    defer file.close();
+    var dst = try std.fs.createFileAbsolute(try std.fmt.allocPrint(step.owner.allocator, "{s}/gol_card_cfi.s", .{self.file.dirname().getPath2(step.owner, step)}), .{});
+    defer dst.close();
 
-    const filesize = (try file.metadata()).size();
+    const filesize = (try src.metadata()).size();
     var progress: std.Progress.Node = opt.progress_node.start("Removing CFI Directives", 100);
     defer progress.end();
 
@@ -29,13 +31,13 @@ fn make(step: *std.Build.Step, opt: std.Build.Step.MakeOptions) anyerror!void {
     var offset: usize = 0;
     while (true) {
         // Read into buffer
-        try file.seekTo(read_idx);
-        const idx = try file.read(buf[offset..]);
+        try src.seekTo(read_idx);
+        const idx = try src.read(buf[offset..]);
         if (write_idx > 10000000) @panic("Runaway CFI code.");
         if (idx == 0) break;
         read_idx += idx;
         progress.setCompletedItems((read_idx * 100) / (filesize));
-        const haystack = buf[0..idx];
+        const haystack = buf[0 .. idx + offset];
 
         // Deal with all of the data in the buffer
         var start_idx: usize = 0;
@@ -50,7 +52,7 @@ fn make(step: *std.Build.Step, opt: std.Build.Step.MakeOptions) anyerror!void {
                 // Found the end of the line, start writing to file again.
                 cfi_found = false;
                 // Skip the newline too, and avoid edge case at end of buffer
-                start_idx += 1;
+                //start_idx += 1;
                 if (start_idx == haystack.len) {
                     offset = 0;
                     break;
@@ -64,9 +66,9 @@ fn make(step: *std.Build.Step, opt: std.Build.Step.MakeOptions) anyerror!void {
                     // This is a tradeoff from having to check for multiple combinations of characters
                     const tab_idx = std.mem.indexOfScalarPos(u8, haystack, haystack.len - 4, '\t') orelse haystack.len;
                     // Write safe data back to file
-                    try file.seekTo(write_idx);
+                    try dst.seekTo(write_idx);
                     const safe = haystack[start_idx..tab_idx];
-                    try file.writeAll(safe);
+                    try dst.writeAll(safe);
                     write_idx += safe.len;
                     // Put unsafe data at front of buffer
                     const unsafe = haystack[tab_idx..];
@@ -76,9 +78,9 @@ fn make(step: *std.Build.Step, opt: std.Build.Step.MakeOptions) anyerror!void {
                     break;
                 };
                 // Found one, write everything before it
-                try file.seekTo(write_idx);
+                try dst.seekTo(write_idx);
                 const safe = haystack[start_idx..next_idx];
-                try file.writeAll(safe);
+                try dst.writeAll(safe);
                 // Start writing at the correct spot next time
                 write_idx += safe.len;
                 // Switch to CFI found mode
@@ -89,7 +91,7 @@ fn make(step: *std.Build.Step, opt: std.Build.Step.MakeOptions) anyerror!void {
         }
     }
     // Chop off the unused part of the file
-    try file.setEndPos(write_idx);
+    //try src.setEndPos(write_idx);
 }
 
 pub fn create(owner: *std.Build, file: std.Build.LazyPath) *RemoveCFIStep {
@@ -104,4 +106,8 @@ pub fn create(owner: *std.Build, file: std.Build.LazyPath) *RemoveCFIStep {
         }),
     };
     return remove;
+}
+
+pub fn getOutput(self: *RemoveCFIStep) std.Build.LazyPath {
+    return self.file.dirname().path(self.step.owner, "gol_card_cfi.s");
 }

@@ -448,7 +448,7 @@ pub fn build(b: *std.Build) !void {
     const remove = RemoveCFIStep.create(b, build_object.getEmittedAsm());
     remove.step.dependOn(&build_object.step);
 
-    const install_asm = b.addInstallFile(build_object.getEmittedAsm(), "gol_card.s");
+    const install_asm = b.addInstallFile(remove.getOutput(), "gol_card.s");
     install_asm.step.dependOn(&remove.step);
 
     const build_asm = b.step("msp430-asm", "Build the assembly for the MSP430.");
@@ -463,7 +463,7 @@ pub fn build(b: *std.Build) !void {
     const gcc_embedded = b.addSystemCommand(&gcc_args);
     gcc_embedded.has_side_effects = false;
     gcc_embedded.addArg(std.fmt.allocPrint(b.allocator, "-mmcu={s}", .{@tagName(mcu)}) catch @panic("OOM"));
-    gcc_embedded.addFileArg(build_object.getEmittedAsm());
+    gcc_embedded.addFileArg(remove.getOutput());
     gcc_embedded.addArg("-lmul_32");
     if (maybe_toolchain) |tc| {
         gcc_embedded.step.dependOn(tc);
