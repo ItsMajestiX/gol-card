@@ -40,6 +40,11 @@ pub fn preUpdate() *State {
     // set up the display
     display.initDisplay();
 
+    // set global interrupt handler for display IRQ to work.
+    msp.nop();
+    msp.enableInterrupts();
+    msp.nop();
+
     // TODO: get bit of entropy, add to data
     msp.crc.initCRC();
     msp.sys.setProgramProtection(false);
@@ -48,7 +53,6 @@ pub fn preUpdate() *State {
 
 pub fn markComplete() void {
     to_send += State.width / 8;
-    // If interrupted here, would take the new data (cannot be stalled, as that would disable interrupts).
     if (stall) {
         stall = false;
         msp.eusci.setTXInt(true); // this should immidiately trigger an interrupt
@@ -66,6 +70,28 @@ pub fn getCRC() u16 {
 pub fn postUpdate() void {
     // TODO: lots of stuff, will go into a lesser sleep while SPI finishes
     msp.sys.setProgramProtection(true);
+
+    // If an interrupt happens that sets complete to true after we check it, we will softlock
+    msp.disableInterrupts();
+    msp.nop();
+
+    if (!complete) {
+        asm volatile ("bis #24, sr"); // from TI manual, similtaneously enable interrupts and shut off CPU
+        msp.nop();
+    }
+
+    // when we reach this point the tx interrupt will be off so we don't need to worry about interrupts
+
+    // this shouldn't be needed but just in case
+    msp.eusci.busyWaitForComplete();
+
+    msp.eusci.enableSWReset(true);
+    // switch the byte order back to MSB for the last few commands
+    msp.eusci.setSPIBitOrder(true);
+    msp.eusci.enableSWReset(false);
+
+    display.refresh();
+    display.powerOff();
 }
 
 pub fn getSeed() [4]u64 {
@@ -86,12 +112,17 @@ pub fn markAllComplete() void {
 var lowest_sent: u16 = 0;
 var to_send: u16 = 0;
 var stall: bool = false;
+var complete: bool = false;
 /// Called by the SPI IRQ after setup is complete to get new data.
 pub fn imageFetchData() void {
     if (lowest_sent == to_send) {
         // no more data to send
         stall = true;
-        msp.eusci.setTXInt(false); // everything is transmitted, no more interrupt needed.
+        // disabling will be done by SPI handler, will be reenabled by markComplete.
+        if (lowest_sent == State.height) {
+            // everything is sent, set complete
+            complete = true;
+        }
         return;
     }
     const new_slice = state.board[lowest_sent..to_send];

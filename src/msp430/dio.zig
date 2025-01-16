@@ -7,18 +7,62 @@ pub const PinMode = enum {
     Tertiary,
 };
 
-fn DigitalIO(comptime base: [*]u8) type {
+pub const PinTransition = enum {
+    LowToHigh,
+    HighToLow,
+};
+
+pub const DigitalIOBase = enum(usize) {
+    port1,
+    port2,
+    port3,
+
+    fn toPtr(self: DigitalIOBase) [*]u8 {
+        switch (self) {
+            .port1 => return @extern([*]u8, .{ .name = "PAIN_L" }),
+            .port2 => return @extern([*]u8, .{ .name = "PAIN_H" }),
+            .port3 => return @extern([*]u8, .{ .name = "PBIN_L" }),
+        }
+    }
+};
+
+fn DigitalIO(comptime base: DigitalIOBase) type {
     return struct {
-        const input: *volatile u8 = @ptrCast(base);
-        const output: *volatile u8 = @ptrCast(base + 2);
-        const direction: *volatile u8 = @ptrCast(base + 4);
-        const resistor_enable: *volatile u8 = @ptrCast(base + 6);
-        const select_0: *volatile u8 = @ptrCast(base + 0xA);
-        const select_1: *volatile u8 = @ptrCast(base + 0xC);
-        const complement: *volatile u8 = @ptrCast(base + 0x16);
-        const interrupt_edge: *volatile u8 = @ptrCast(base + 0x18);
-        const interrupt_enable: *volatile u8 = @ptrCast(base + 0x1A);
-        const interrupt_flag: *volatile u8 = @ptrCast(base + 0x1C);
+        const base_ptr = base.toPtr();
+        const input: *volatile u8 = @ptrCast(base_ptr);
+        const output: *volatile u8 = @ptrCast(base_ptr + 2);
+        const direction: *volatile u8 = @ptrCast(base_ptr + 4);
+        const resistor_enable: *volatile u8 = @ptrCast(base_ptr + 6);
+        const select_0: *volatile u8 = @ptrCast(base_ptr + 0xA);
+        const select_1: *volatile u8 = @ptrCast(base_ptr + 0xC);
+        const complement: *volatile u8 = @ptrCast(base_ptr + 0x16);
+        const interrupt_edge: *volatile u8 = @ptrCast(base_ptr + 0x18);
+        const interrupt_enable: *volatile u8 = @ptrCast(base_ptr + 0x1A);
+        const interrupt_flag: *volatile u8 = @ptrCast(base_ptr + 0x1C);
+
+        // only export irq for ports that support it
+        comptime {
+            switch (base) {
+                .port1, .port2 => {
+                    @export(
+                        &pinIRQ,
+                        .{
+                            .section = "__interrupt_vector_" ++ @tagName(base),
+                            .name = "pinIRQ_" ++ @tagName(base),
+                        },
+                    );
+                },
+                else => {},
+            }
+        }
+
+        fn pinIRQ() callconv(.C) void {
+            // exit LPM and return to code, with GIE disabled
+            asm volatile (
+                \\bic #248, 0(r1)
+                \\reti
+            );
+        }
 
         pub fn reset() void {
             direction.* = 0xFF; // set all pins to output, will be in GPIO mode by default
@@ -70,6 +114,36 @@ fn DigitalIO(comptime base: [*]u8) type {
                 resistor_enable.* &= ~(@as(u8, 1) << @as(u3, @truncate(pin)));
             }
         }
+
+        /// Places the CPU in LPM4 until the specified pin transition happens.
+        /// Make sure to disable anything that would keep the CPU from entering the desired LPM.
+        pub fn waitForChange(pin: u8, mode: PinTransition) void {
+            switch (base) {
+                .port1, .port2 => {},
+                else => @compileError("Attempted to wait on a pin in a port that doesn't support interrupts."),
+            }
+            if (mode == .HighToLow) {
+                interrupt_edge.* |= (@as(u8, 1) << @as(u3, @truncate(pin)));
+            } else {
+                interrupt_edge.* &= ~(@as(u8, 1) << @as(u3, @truncate(pin)));
+            }
+
+            // avoid getting interrupted before going to sleep
+            msp.disableInterrupts();
+            msp.nop();
+
+            interrupt_enable.* |= (@as(u8, 1) << @as(u3, @truncate(pin)));
+
+            asm volatile ("bis #248, r2"); // enter LPM4
+
+            // now the event should have passed, clear the pin interrupt and reenable interrupts globally
+            interrupt_enable.* &= ~(@as(u8, 1) << @as(u3, @truncate(pin)));
+            interrupt_flag.* &= ~(@as(u8, 1) << @as(u3, @truncate(pin)));
+
+            msp.nop();
+            msp.enableInterrupts();
+            msp.nop();
+        }
     };
 }
 
@@ -95,15 +169,16 @@ pub fn Pin(comptime dio: anytype, comptime pin: u8) type {
         pub fn setResistor(enable: bool) void {
             dio.setResistor(pin, enable);
         }
+
+        pub fn waitForChange(mode: PinTransition) void {
+            dio.waitForChange(pin, mode);
+        }
     };
 }
 
-const PAIN_L: [*]u8 = @extern([*]u8, .{ .name = "PAIN_L" });
-pub const Port1 = DigitalIO(PAIN_L);
-const PAIN_H: [*]u8 = @extern([*]u8, .{ .name = "PAIN_H" });
-pub const Port2 = DigitalIO(PAIN_H);
-const PBIN_L: [*]u8 = @extern([*]u8, .{ .name = "PBIN_L" });
-pub const Port3 = DigitalIO(PBIN_L);
+pub const Port1 = DigitalIO(.port1);
+pub const Port2 = DigitalIO(.port2);
+pub const Port3 = DigitalIO(.port3);
 
 pub fn resetAll() void {
     Port1.reset();

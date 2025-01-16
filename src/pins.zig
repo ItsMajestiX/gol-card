@@ -1,9 +1,9 @@
 const msp = @import("./msp430.zig");
 
 // manually controlled
-pub const ePD_Reset = msp.dio.Pin(msp.dio.Port2, 7);
+pub const ePD_Reset = msp.dio.Pin(msp.dio.Port3, 0);
 pub const ePD_DataCommand = msp.dio.Pin(msp.dio.Port2, 2);
-pub const ePD_Busy = msp.dio.Pin(msp.dio.Port3, 0);
+pub const ePD_Busy = msp.dio.Pin(msp.dio.Port2, 7);
 pub const ePD_Power = msp.dio.Pin(msp.dio.Port3, 2);
 
 // controlled by eUSCI module

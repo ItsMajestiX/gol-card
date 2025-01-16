@@ -131,6 +131,7 @@ pub fn initSPI() void {
 
     // 2. configure registers
     // set this first to prevent batching writes to the status register
+    UCB0CTLW0.UCSYNC = .SYNC;
     UCB0BRW.* = 0; // Disable divider, already predivided to 2MHz
     UCB0CTLW0.UC7BIT = false;
     UCB0CTLW0.UCCKPL = .InactiveLow;
@@ -139,7 +140,6 @@ pub fn initSPI() void {
     UCB0CTLW0.UCMST = true;
     UCB0CTLW0.UCSSEL0 = 2; // SMCLK
     UCB0CTLW0.UCSTEM = .EnableSlave;
-    UCB0CTLW0.UCSYNC = .SYNC;
     setSPIBitOrder(true); // set this for now
 
     // 3. configure ports
@@ -165,8 +165,9 @@ pub fn busyWaitForComplete() void {
 
 // SPI IRQ
 
-// volatile keywords needed or LLVM optimizes the function away
+// volatile keyword needed to prevent incorrect optimization
 var to_send: []const u8 = undefined;
+
 var fetch_data: *const fn () void = undefined;
 
 comptime {
@@ -183,15 +184,24 @@ pub noinline fn __interrupt_vector_usci_b0() callconv(.C) void {
     asm volatile (
         \\push r12
         \\push r13
+        \\push r14
     );
     UCB0TXBUF.* = @as(u16, to_send[0]);
     const new_send = to_send[1..];
     if (new_send.len == 0) {
+        @branchHint(.unlikely);
         fetch_data();
+        if (to_send.len == 0) {
+            @branchHint(.unlikely);
+            // Make sure CPU wakes up from LPM0 if it is currently set
+            asm volatile ("bic #16, 6(r1)"); // unset the CPUOFF bit, but keep GIE set
+            msp.eusci.setTXInt(false); // will need to disable or it will keep triggering
+        }
     } else {
         to_send = new_send;
     }
     asm volatile (
+        \\pop r14
         \\pop r13
         \\pop r12
         \\reti
@@ -207,7 +217,7 @@ pub fn setTXInt(enable: bool) void {
 pub fn sendSlice(new_slice: []const u8) void {
     var temp_slice = new_slice;
     while (UCB0IFG.UCTXIFG) {
-        UCB0TXBUF.* = @as(u16, to_send[0]);
+        UCB0TXBUF.* = @as(u16, temp_slice[0]);
         temp_slice = temp_slice[1..];
         if (temp_slice.len == 0) {
             @branchHint(.unlikely);

@@ -116,21 +116,16 @@ const EPD_3IN52_lut_R23_GC = [_]u8{ 0x01, 0x4f, 0x8f, 0x4f, 0x01, 0x01, 0x01, 0x
 // used
 const EPD_3IN52_lut_R24_GC = [_]u8{ 0x01, 0x0f, 0x8f, 0x4f, 0x01, 0x01, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
 
-fn readBusy() void {
-    const prevSource = msp.cs.getMCLKSource();
-    msp.cs.setMCLKSource(.VLOCLK);
-    while (!pins.ePD_Busy.getPin()) {}
-    msp.cs.setMCLKSource(prevSource);
-}
-
 /// Refresh the eInk display.
-fn refresh() void {
+pub fn refresh() void {
     pins.ePD_DataCommand.setPin(false); // command mode
     msp.eusci.sendDataSync(0x17); // refresh sequence
     pins.ePD_DataCommand.setPin(true); // data mode
     msp.eusci.sendDataSync(0xA5);
     msp.busyWait(1); // make sure the pin is set before busy waiting
-
+    msp.eusci.enableSWReset(true); // disable the SPI for now
+    pins.ePD_Busy.waitForChange(.LowToHigh); // go to LPM4 until the display is done
+    msp.eusci.enableSWReset(false);
 }
 
 // This was the second branch of the LUT code if the lut was redownloaded
@@ -155,7 +150,7 @@ pub fn powerOff() void {
     pins.ePD_DataCommand.setPin(true); // data mode
     msp.eusci.sendDataSync(0xA5);
 
-    msp.busyWait(1); // wait for shutdown
+    msp.busyWait(4); // wait for shutdown
     pins.ePD_Power.setPin(false); // remove power
 }
 
@@ -181,6 +176,7 @@ fn setupFetchData() void {
             pins.ePD_DataCommand.setPin(false); // command mode
             msp.eusci.sendDataSync(0x00); // panel setting   PSR
             pins.ePD_DataCommand.setPin(true); // data mode
+            // changing this byte may fix mirroring issues
             msp.eusci.sendDataSync(0xFF); // RES1 RES0 REG KW/R     UD    SHL   SHD_N  RST_N
             msp.eusci.sendDataSync(0x01); // x x x VCMZ TS_AUTO TIGE NORG VC_LUTZ
             pins.ePD_DataCommand.setPin(false); // command mode
@@ -189,9 +185,12 @@ fn setupFetchData() void {
             // This should be enough time to get a few instructions off.
             setup_stage += 1;
             msp.eusci.sendSlice(&stage0_data);
+            // buffer is full, so int shouldn't be tripped immidiately.
+            // from now on, this function will be called in IRQ.
+            msp.eusci.setTXInt(true);
         },
         1 => {
-            // sending command bits next, so flush everything
+            // sending command byte next, so flush everything
             msp.eusci.busyWaitForComplete();
             pins.ePD_DataCommand.setPin(false); // command mode
             msp.eusci.sendDataSync(0x06); // booster soft start   BTST
@@ -284,8 +283,9 @@ fn setupFetchData() void {
             msp.eusci.busyWaitForComplete();
             pins.ePD_DataCommand.setPin(false); // command mode
             msp.eusci.sendDataSync(0x13); //Transfer new data
+            pins.ePD_DataCommand.setPin(true); // data mode
 
-            // once the command byte is sent, shut down the eUSCI module to reconfigure it
+            // once the mode is switched, shut down the eUSCI module to reconfigure it
             msp.eusci.enableSWReset(true);
             // the display expects the MSB to be the lowest pixel, but it's stored in the LSB here
             // switch byte order to fix this
