@@ -1,4 +1,4 @@
-const msp = @import("./msp430.zig");
+const msp = @import("../msp430.zig");
 
 const CSCTL0: *volatile u16 = @extern(*volatile u16, .{
     .name = "CSCTL0",
@@ -42,6 +42,67 @@ const ClockSystemControlRegister3 = packed struct(u16) {
 
 const CSCTL3: *volatile ClockSystemControlRegister3 = @extern(*volatile ClockSystemControlRegister3, .{
     .name = "CSCTL3",
+});
+
+const ClockSystemControlRegister4 = packed struct(u16) {
+    pub const MCLKSource = enum(u3) {
+        DCOCLKDIV = 0,
+        REFOCLK = 1,
+        XT1CLK = 2,
+        VLOCLK = 3,
+    };
+
+    pub const ACLKSource = enum(u2) {
+        XT1CLK = 0,
+        REFO = 1,
+        VLO = 2,
+    };
+
+    SELMS: MCLKSource,
+    _unused1: u5,
+    SELA: ACLKSource,
+    _unused2: u6,
+};
+
+const CSCTL4: *volatile ClockSystemControlRegister4 = @extern(*volatile ClockSystemControlRegister4, .{
+    .name = "CSCTL4",
+});
+
+const ClockSystemControlRegister5 = packed struct(u16) {
+    pub const MCLKDivider = enum(u3) {
+        @"1" = 0,
+        @"2" = 1,
+        @"4" = 2,
+        @"8" = 3,
+        @"16" = 4,
+        @"32" = 5,
+        @"64" = 6,
+        @"128" = 7,
+    };
+
+    pub const SMCLKDivider = enum(u2) {
+        @"1" = 0,
+        @"2" = 1,
+        @"4" = 2,
+        @"8" = 3,
+    };
+
+    /// Predivider for MCLK
+    DIVM: MCLKDivider,
+    _unused1: u1,
+    /// Predividers for SMCLK
+    DIVS: SMCLKDivider,
+    _unused2: u2,
+    /// Disables SMCLK
+    SMCLKOFF: bool,
+    _unused3: u3,
+    /// Automatically turn VLO off when not used
+    VLOAUTOOFF: bool,
+    _unused4: u3,
+};
+
+const CSCTL5: *volatile ClockSystemControlRegister5 = @extern(*volatile ClockSystemControlRegister5, .{
+    .name = "CSCTL5",
 });
 
 const ClockSystemControlRegister7 = packed struct(u16) {
@@ -93,4 +154,13 @@ pub fn setClock16MHz() void {
     enableFLL();
     // wait to stabilize
     while (CSCTL7.FLLUNLOCK != 0) {}
+    CSCTL5.DIVS = .@"8";
+}
+
+pub fn getMCLKSource() ClockSystemControlRegister4.MCLKSource {
+    return CSCTL4.SELMS;
+}
+
+pub fn setMCLKSource(source: ClockSystemControlRegister4.MCLKSource) void {
+    CSCTL4.SELMS = source;
 }

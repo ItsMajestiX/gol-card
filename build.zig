@@ -464,6 +464,7 @@ pub fn build(b: *std.Build) !void {
     gcc_embedded.has_side_effects = false;
     gcc_embedded.addArg(std.fmt.allocPrint(b.allocator, "-mmcu={s}", .{@tagName(mcu)}) catch @panic("OOM"));
     gcc_embedded.addFileArg(build_object.getEmittedAsm());
+    gcc_embedded.addArg("-lmul_32");
     if (maybe_toolchain) |tc| {
         gcc_embedded.step.dependOn(tc);
     }

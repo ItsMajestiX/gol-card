@@ -1,6 +1,10 @@
 const std = @import("std");
+
+const display = @import("./display.zig");
+const bmutil = @import("./bmutil.zig");
+const msp = @import("./msp430.zig");
+const pins = @import("./pins.zig");
 const State = @import("./state.zig").State;
-const msp = @import("./msp430/msp430.zig");
 
 // If board is just set to var, the linker will place it in RAM and fail. If board is marked const, Zig will optimize away
 // memcpy calls to it. This should tell the linker to place the object in FRAM but tell Zig that it can be mutated.
@@ -13,18 +17,42 @@ comptime {
 var state: State = State{};
 
 pub fn preUpdate() *State {
-    // TODO: get bit of entropy, add to data
+    // start the 16MHz clock
     msp.watchdog.disableWatchdog();
     msp.fram.setFRAMWaitStateEnabled(true);
     msp.cs.setClock16MHz();
+
+    // initialize IO pins
+    msp.dio.resetAll();
+
+    // SPI setup
+    msp.eusci.initSPI();
+
+    // ePD_DataCommand, ePD_Reset, ePD_Power
+    // do not need to set direction, reset sets all pins to outputs
+    // all good
+
+    // ePD_Busy
+    pins.ePD_Busy.setDirection(false); // set busy pin to input
+    pins.ePD_Busy.setPin(true); // when in input mode, true sets pullup resistor
+    pins.ePD_Busy.setResistor(true); // enable the resistor
+
+    // set up the display
+    display.initDisplay();
+
+    // TODO: get bit of entropy, add to data
     msp.crc.initCRC();
     msp.sys.setProgramProtection(false);
     return &state;
 }
 
 pub fn markComplete(row: usize) void {
-    // TODO: integrate with SPI interrupt
-    _ = row;
+    to_send = row;
+    // If interrupted here, would take the new data (cannot be stalled, as that would disable interrupts).
+    if (stall) {
+        stall = false;
+        msp.eusci.setTXInt(true); // this should immidiately trigger an interrupt
+    }
 }
 
 pub fn newByte(b: u8) void {
@@ -47,5 +75,26 @@ pub fn getSeed() [4]u64 {
 }
 
 pub fn markAllComplete() void {
-    // TODO: integrate with SPI handler.
+    to_send = State.height;
+    // If interrupted here, would take the new data (cannot be stalled, as that would disable interrupts).
+    if (stall) {
+        stall = false;
+        msp.eusci.setTXInt(true); // this should immidiately trigger an interrupt
+    }
+}
+
+var lowest_sent: u16 = 0;
+var to_send: u16 = 0;
+var stall: bool = false;
+/// Called by the SPI IRQ after setup is complete to get new data.
+pub fn imageFetchData() void {
+    if (lowest_sent == to_send) {
+        // no more data to send
+        stall = true;
+        msp.eusci.setTXInt(false); // everything is transmitted, no more interrupt needed.
+        return;
+    }
+    const new_slice = state.board[(State.width * lowest_sent / 8)..(State.width * to_send / 8)];
+    lowest_sent = to_send;
+    msp.eusci.sendSlice(new_slice);
 }

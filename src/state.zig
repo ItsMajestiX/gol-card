@@ -3,11 +3,11 @@ const std = @import("std");
 
 pub const State = extern struct {
     // size of board and window
-    pub const width = 360;
+    pub const width = 240;
     comptime {
         std.debug.assert(width % 8 == 0); // this makes copying rows much easier
     }
-    pub const height = 240;
+    pub const height = 360;
 
     reset_next: bool = false,
     crc_idx: u8 = 0,
