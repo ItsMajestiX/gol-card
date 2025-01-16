@@ -17,6 +17,7 @@ var crc: std.hash.crc.Crc16Ibm3740 = undefined;
 var state: State = State{};
 
 pub fn preUpdate() *State {
+    current_row = 0;
     if (texture == null) {
         texture = rl.loadTextureFromImage(img);
     }
@@ -46,10 +47,12 @@ pub fn preUpdate() *State {
     return &state;
 }
 
-pub fn markComplete(row: usize) void {
+var current_row: usize = 0;
+pub fn markComplete() void {
     for (0..width) |i| {
-        framebuffer[width * row + i] = ~bitmapGet(getRow(&state.board, row, width), i) +% 1;
+        framebuffer[width * current_row + i] = ~bitmapGet(getRow(&state.board, current_row, width), i) +% 1;
     }
+    current_row += 1;
 }
 
 pub fn newByte(b: u8) void {
@@ -81,7 +84,7 @@ pub fn getSeed() [4]u64 {
 }
 
 pub fn markAllComplete() void {
-    for (0..height) |i| {
-        markComplete(i);
+    for (0..height) |_| {
+        markComplete();
     }
 }

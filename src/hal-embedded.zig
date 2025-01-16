@@ -46,8 +46,8 @@ pub fn preUpdate() *State {
     return &state;
 }
 
-pub fn markComplete(row: usize) void {
-    to_send = row;
+pub fn markComplete() void {
+    to_send += State.width / 8;
     // If interrupted here, would take the new data (cannot be stalled, as that would disable interrupts).
     if (stall) {
         stall = false;
@@ -75,7 +75,7 @@ pub fn getSeed() [4]u64 {
 }
 
 pub fn markAllComplete() void {
-    to_send = State.height;
+    to_send = (State.height * State.width / 8);
     // If interrupted here, would take the new data (cannot be stalled, as that would disable interrupts).
     if (stall) {
         stall = false;
@@ -94,7 +94,7 @@ pub fn imageFetchData() void {
         msp.eusci.setTXInt(false); // everything is transmitted, no more interrupt needed.
         return;
     }
-    const new_slice = state.board[(State.width * lowest_sent / 8)..(State.width * to_send / 8)];
+    const new_slice = state.board[lowest_sent..to_send];
     lowest_sent = to_send;
     msp.eusci.sendSlice(new_slice);
 }

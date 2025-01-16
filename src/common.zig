@@ -145,19 +145,19 @@ fn updateBoard(board: []u8) void {
         const newRow = stepRow(middleRow, &topRow, bottomRow);
         @memcpy(&topRow, middleRow);
         @memcpy(getRow(board, i, width), &newRow);
-        hal.markComplete(i);
+        hal.markComplete();
         middleRow = bottomRow;
         bottomRow = getRow(board, (i + 2), width);
     }
     var newRow = stepRow(middleRow, &topRow, bottomRow); // remove from loop to avoid branch
     @memcpy(&topRow, middleRow);
     @memcpy(getRow(board, height - 2, width), &newRow);
-    hal.markComplete(height - 2);
+    hal.markComplete();
     middleRow = bottomRow;
     bottomRow = &row0; // wrap around
     newRow = stepRow(middleRow, &topRow, bottomRow);
     @memcpy(getRow(board, height - 1, width), &newRow); // do not need to save
-    hal.markComplete(height - 1);
+    hal.markComplete();
 }
 
 test "updateBoard" {

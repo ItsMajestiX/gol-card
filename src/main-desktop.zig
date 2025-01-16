@@ -15,8 +15,8 @@ pub fn main() anyerror!void {
     var frameCount: u16 = 0;
     var step = true;
     _ = hal.preUpdate();
-    for (0..height) |i| {
-        hal.markComplete(i);
+    for (0..height) |_| {
+        hal.markComplete();
     }
     hal.postUpdate();
 
