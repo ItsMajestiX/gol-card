@@ -188,8 +188,8 @@ pub noinline fn __interrupt_vector_usci_b0() callconv(.C) void {
         \\push r14
     );
     UCB0TXBUF.* = @as(u16, to_send[0]);
-    const new_send = to_send[1..];
-    if (new_send.len == 0) {
+    to_send = to_send[1..];
+    if (to_send.len == 0) {
         @branchHint(.unlikely);
         fetch_data();
         if (to_send.len == 0) {
@@ -198,8 +198,6 @@ pub noinline fn __interrupt_vector_usci_b0() callconv(.C) void {
             asm volatile ("bic #16, 6(r1)"); // unset the CPUOFF bit, but keep GIE set
             msp.eusci.setTXInt(false); // will need to disable or it will keep triggering
         }
-    } else {
-        to_send = new_send;
     }
     asm volatile (
         \\pop r14
