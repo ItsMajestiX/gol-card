@@ -48,11 +48,12 @@ pub fn preUpdate() *State {
     // TODO: get bit of entropy, add to data
     msp.crc.initCRC();
     msp.sys.setProgramProtection(false);
+
     return &state;
 }
 
 pub fn markComplete() void {
-    to_send += State.width / 8;
+    pending += State.width / 8;
     if (stall) {
         stall = false;
         msp.eusci.setTXInt(true); // this should immidiately trigger an interrupt
@@ -81,8 +82,6 @@ pub fn postUpdate() void {
     }
 
     // when we reach this point the tx interrupt will be off so we don't need to worry about interrupts
-
-    // this shouldn't be needed but just in case
     msp.eusci.busyWaitForComplete();
 
     msp.eusci.enableSWReset(true);
@@ -101,7 +100,7 @@ pub fn getSeed() [4]u64 {
 }
 
 pub fn markAllComplete() void {
-    to_send = (State.height * State.width / 8);
+    pending = state.board.len;
     // If interrupted here, would take the new data (cannot be stalled, as that would disable interrupts).
     if (stall) {
         stall = false;
@@ -110,22 +109,22 @@ pub fn markAllComplete() void {
 }
 
 var lowest_sent: u16 = 0;
-var to_send: u16 = 0;
+var pending: u16 = 0;
 var stall: bool = false;
 var complete: bool = false;
 /// Called by the SPI IRQ after setup is complete to get new data.
 pub fn imageFetchData() void {
-    if (lowest_sent == to_send) {
+    if (lowest_sent == pending) {
         // no more data to send
-        stall = true;
         // disabling will be done by SPI handler, will be reenabled by markComplete.
-        if (lowest_sent == State.height) {
+        stall = true;
+        if (lowest_sent == state.board.len) {
             // everything is sent, set complete
             complete = true;
         }
         return;
     }
-    const new_slice = state.board[lowest_sent..to_send];
-    lowest_sent = to_send;
+    const new_slice = state.board[lowest_sent..pending];
+    lowest_sent = pending;
     msp.eusci.sendSlice(new_slice);
 }

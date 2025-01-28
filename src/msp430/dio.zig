@@ -12,7 +12,7 @@ pub const PinTransition = enum {
     HighToLow,
 };
 
-pub const DigitalIOBase = enum(usize) {
+pub const DigitalIOBase = enum {
     port1,
     port2,
     port3,
@@ -55,13 +55,18 @@ fn DigitalIO(comptime base: DigitalIOBase) type {
                 else => {},
             }
         }
-
-        fn pinIRQ() callconv(.C) void {
-            // exit LPM and return to code, with GIE disabled
+        fn pinIRQ() callconv(.C) noreturn {
+            // exit LPM and return to code, with GIE enabled
+            // adding these lines forces LLVM to generate separate interrupts
+            // this prevents it from trying to call another copy of this function and
+            // messing up the stack.
+            interrupt_enable.* = 0;
+            interrupt_flag.* = 0;
             asm volatile (
-                \\bic #248, 0(r1)
+                \\bic #240, 0(r1)
                 \\reti
             );
+            unreachable;
         }
 
         pub fn reset() void {
@@ -136,13 +141,7 @@ fn DigitalIO(comptime base: DigitalIOBase) type {
 
             asm volatile ("bis #248, r2"); // enter LPM4
 
-            // now the event should have passed, clear the pin interrupt and reenable interrupts globally
-            interrupt_enable.* &= ~(@as(u8, 1) << @as(u3, @truncate(pin)));
-            interrupt_flag.* &= ~(@as(u8, 1) << @as(u3, @truncate(pin)));
-
-            msp.nop();
-            msp.enableInterrupts();
-            msp.nop();
+            // now the event should have passed, isr cleared flags and left GIE enabled
         }
     };
 }

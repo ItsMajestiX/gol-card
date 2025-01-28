@@ -159,7 +159,7 @@ pub inline fn setSPIBitOrder(msb_first: bool) void {
     UCB0CTLW0.UCMSB = msb_first;
 }
 
-pub fn busyWaitForComplete() void {
+pub inline fn busyWaitForComplete() void {
     while (UCB0STATW.UCBUSY) {}
 }
 
@@ -173,14 +173,14 @@ var fetch_data: *const fn () void = undefined;
 comptime {
     @export(&__interrupt_vector_usci_b0, .{
         .name = "__interrupt_vector_usci_b0",
-        .section = "__interrupt_vector_usci_b0",
+        .section = "aaaa",
         .linkage = .strong,
         .visibility = .default,
     });
 }
 
 pub noinline fn __interrupt_vector_usci_b0() callconv(.C) void {
-    // LLVM can run the entire interrupt with just these two registers. Impressive.
+    // LLVM can run the entire interrupt with just these three registers. Impressive.
     asm volatile (
         \\push r12
         \\push r13
