@@ -44,8 +44,9 @@ fn DigitalIO(comptime base: DigitalIOBase) type {
         comptime {
             switch (base) {
                 .port1, .port2 => {
+                    const irq_ptr = &pinIRQ;
                     @export(
-                        &pinIRQ,
+                        &irq_ptr,
                         .{
                             .section = "__interrupt_vector_" ++ @tagName(base),
                             .name = "pinIRQ_" ++ @tagName(base),

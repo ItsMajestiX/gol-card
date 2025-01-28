@@ -171,9 +171,10 @@ var to_send: []const u8 = undefined;
 var fetch_data: *const fn () void = undefined;
 
 comptime {
-    @export(&__interrupt_vector_usci_b0, .{
-        .name = "__interrupt_vector_usci_b0",
-        .section = "aaaa",
+    const int_ptr = &__interrupt_vector_usci_b0;
+    @export(&int_ptr, .{
+        .name = "spi_int",
+        .section = "__interrupt_vector_usci_b0",
         .linkage = .strong,
         .visibility = .default,
     });
