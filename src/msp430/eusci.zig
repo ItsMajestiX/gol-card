@@ -187,8 +187,6 @@ pub noinline fn __interrupt_vector_usci_b0() callconv(.C) void {
         \\push r13
         \\push r14
     );
-    UCB0TXBUF.* = @as(u16, to_send[0]);
-    to_send = to_send[1..];
     if (to_send.len == 0) {
         @branchHint(.unlikely);
         fetch_data();
@@ -198,6 +196,9 @@ pub noinline fn __interrupt_vector_usci_b0() callconv(.C) void {
             asm volatile ("bic #16, 6(r1)"); // unset the CPUOFF bit, but keep GIE set
             msp.eusci.setTXInt(false); // will need to disable or it will keep triggering
         }
+    } else {
+        UCB0TXBUF.* = @as(u16, to_send[0]);
+        to_send = to_send[1..];
     }
     asm volatile (
         \\pop r14
@@ -216,13 +217,14 @@ pub fn setTXInt(enable: bool) void {
 pub fn sendSlice(new_slice: []const u8) void {
     var temp_slice = new_slice;
     while (UCB0IFG.UCTXIFG) {
-        UCB0TXBUF.* = @as(u16, temp_slice[0]);
-        temp_slice = temp_slice[1..];
+        // do this check first to avoid accessing undefined memory
         if (temp_slice.len == 0) {
             @branchHint(.unlikely);
             fetch_data();
             return;
         }
+        UCB0TXBUF.* = @as(u16, temp_slice[0]);
+        temp_slice = temp_slice[1..];
     }
     to_send = temp_slice;
 }
