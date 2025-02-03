@@ -128,17 +128,21 @@ fn DigitalIO(comptime base: DigitalIOBase) type {
                 .port1, .port2 => {},
                 else => @compileError("Attempted to wait on a pin in a port that doesn't support interrupts."),
             }
+
+            const pinBit: u8 = (@as(u8, 1) << @as(u3, @truncate(pin)));
+
             if (mode == .HighToLow) {
-                interrupt_edge.* |= (@as(u8, 1) << @as(u3, @truncate(pin)));
+                interrupt_edge.* |= pinBit;
             } else {
-                interrupt_edge.* &= ~(@as(u8, 1) << @as(u3, @truncate(pin)));
+                interrupt_edge.* &= ~pinBit;
             }
 
             // avoid getting interrupted before going to sleep
             msp.disableInterrupts();
             msp.nop();
 
-            interrupt_enable.* |= (@as(u8, 1) << @as(u3, @truncate(pin)));
+            interrupt_enable.* |= pinBit;
+            interrupt_flag.* &= ~pinBit;
 
             // setting a breakpoint here causes this to work?????
             asm volatile ("bis #248, r2"); // enter LPM4

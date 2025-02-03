@@ -181,11 +181,11 @@ comptime {
 }
 
 pub noinline fn __interrupt_vector_usci_b0() callconv(.C) void {
-    // LLVM can run the entire interrupt with just these three registers. Impressive.
     asm volatile (
         \\push r12
         \\push r13
         \\push r14
+        \\push r15
     );
     if (to_send.len == 0) {
         @branchHint(.unlikely);
@@ -193,7 +193,7 @@ pub noinline fn __interrupt_vector_usci_b0() callconv(.C) void {
         if (to_send.len == 0) {
             @branchHint(.unlikely);
             // Make sure CPU wakes up from LPM0 if it is currently set
-            asm volatile ("bic #16, 6(r1)"); // unset the CPUOFF bit, but keep GIE set
+            asm volatile ("bic #16, 8(r1)"); // unset the CPUOFF bit, but keep GIE set
             //msp.eusci.setTXInt(false); // will need to disable or it will keep triggering
         }
     } else {
@@ -202,6 +202,7 @@ pub noinline fn __interrupt_vector_usci_b0() callconv(.C) void {
     }
     UCB0IFG.UCRXIFG = false; // disable interrupt, will be triggered once next byte is done transmitting
     asm volatile (
+        \\pop r15
         \\pop r14
         \\pop r13
         \\pop r12

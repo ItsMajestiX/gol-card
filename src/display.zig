@@ -154,9 +154,10 @@ pub fn refresh() void {
     msp.eusci.sendDataSync(0x17); // refresh sequence
     pins.ePD_DataCommand.setPin(true); // data mode
     msp.eusci.sendDataSync(0xA5);
-    msp.busyWait(2); // make sure the pin is set before busy waiting
+    //msp.busyWait(10); // make sure the pin is set before busy waiting
     msp.eusci.enableSWReset(true); // disable the SPI for now
-    pins.ePD_Busy.waitForChange(.LowToHigh); // go to LPM4 until the display is done
+    //pins.ePD_Busy.waitForChange(.LowToHigh); // go to LPM4 until the display is done
+    msp.busyWait(6000);
     msp.eusci.enableSWReset(false);
 }
 
@@ -186,9 +187,13 @@ pub fn powerOff() void {
 pub fn initDisplay() void {
     pins.ePD_DataCommand.setPin(false); // set DC to 0
     pins.ePD_Reset.setPin(false); // reset board
-    msp.busyWait(4); // wait for reset
+    msp.busyWait(1); // wait for reset
     pins.ePD_Reset.setPin(true); // release reset
-    msp.busyWait(4); // datasheet requires waiting 1ms from 90% rst before sending commands
+    msp.busyWait(1); // datasheet requires waiting 1ms from 90% rst before sending commands
+    pins.ePD_Reset.setPin(false); // reset board
+    msp.busyWait(1); // wait for reset
+    pins.ePD_Reset.setPin(true); // release reset
+    msp.busyWait(1); // datasheet requires waiting 1ms from 90% rst before sending commands
     msp.eusci.setFetchData(setupFetchData);
 }
 
