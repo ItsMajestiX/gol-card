@@ -215,11 +215,9 @@ fn setupFetchData() void {
             msp.eusci.sendSlice(&stage0_data);
             // buffer is full, so int shouldn't be tripped immidiately.
             // from now on, this function will be called in IRQ.
-            msp.eusci.setTXInt(true);
+            msp.eusci.setRXInt(true);
         },
         1 => {
-            // sending command byte next, so flush everything
-            msp.eusci.busyWaitForComplete();
             pins.ePD_DataCommand.setPin(false); // command mode
             msp.eusci.sendDataSync(0x06); // booster soft start   BTST
             pins.ePD_DataCommand.setPin(true); // data mode
@@ -227,9 +225,6 @@ fn setupFetchData() void {
             msp.eusci.sendSlice(&stage1_data);
         },
         2 => {
-            // lots of two byte commands
-            msp.eusci.busyWaitForComplete();
-
             pins.ePD_DataCommand.setPin(false); // command mode
             msp.eusci.sendDataSync(0x60); // TCON settingTCON
             pins.ePD_DataCommand.setPin(true); // data mode
@@ -257,7 +252,6 @@ fn setupFetchData() void {
             msp.eusci.sendSlice(&stage2_data);
         },
         3 => {
-            msp.eusci.busyWaitForComplete();
             pins.ePD_DataCommand.setPin(false); // command mode
             msp.eusci.sendDataSync(0x50);
             pins.ePD_DataCommand.setPin(true); // data mode
@@ -274,7 +268,6 @@ fn setupFetchData() void {
             msp.eusci.sendSlice(EPD_3IN52_lut_R20_GC[0..56]);
         },
         4 => {
-            msp.eusci.busyWaitForComplete();
             pins.ePD_DataCommand.setPin(false); // command mode
             msp.eusci.sendDataSync(0x21); // red not use
             pins.ePD_DataCommand.setPin(true); // data mode
@@ -282,7 +275,6 @@ fn setupFetchData() void {
             msp.eusci.sendSlice(EPD_3IN52_lut_R21_GC[0..42]);
         },
         5 => {
-            msp.eusci.busyWaitForComplete();
             pins.ePD_DataCommand.setPin(false); // command mode
             msp.eusci.sendDataSync(0x24); // bb b
             pins.ePD_DataCommand.setPin(true); // data mode
@@ -290,7 +282,6 @@ fn setupFetchData() void {
             msp.eusci.sendSlice(EPD_3IN52_lut_R24_GC[0..42]);
         },
         6 => {
-            msp.eusci.busyWaitForComplete();
             pins.ePD_DataCommand.setPin(false); // command mode
             msp.eusci.sendDataSync(0x22); // bw r
             pins.ePD_DataCommand.setPin(true); // data mode
@@ -298,7 +289,6 @@ fn setupFetchData() void {
             msp.eusci.sendSlice(EPD_3IN52_lut_R22_GC[0..56]);
         },
         7 => {
-            msp.eusci.busyWaitForComplete();
             pins.ePD_DataCommand.setPin(false); // command mode
             msp.eusci.sendDataSync(0x23); // wb w
             pins.ePD_DataCommand.setPin(true); // data mode
@@ -308,7 +298,6 @@ fn setupFetchData() void {
         8 => {
             // All of the non-image setup the display needs is done.
             // Switch over to the image data handler.
-            msp.eusci.busyWaitForComplete();
             pins.ePD_DataCommand.setPin(false); // command mode
             msp.eusci.sendDataSync(0x13); //Transfer new data
             pins.ePD_DataCommand.setPin(true); // data mode
@@ -319,7 +308,7 @@ fn setupFetchData() void {
             // switch byte order to fix this
             msp.eusci.setSPIBitOrder(false);
             msp.eusci.enableSWReset(false);
-            msp.eusci.setTXInt(true); // txint bit was cleared, need to reenable
+            msp.eusci.setRXInt(true); // rxint bit was cleared, need to reenable
 
             // reset to zero to prevent unpredictible behavior
             setup_stage = 0;

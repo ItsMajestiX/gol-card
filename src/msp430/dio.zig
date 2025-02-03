@@ -140,6 +140,7 @@ fn DigitalIO(comptime base: DigitalIOBase) type {
 
             interrupt_enable.* |= (@as(u8, 1) << @as(u3, @truncate(pin)));
 
+            // setting a breakpoint here causes this to work?????
             asm volatile ("bis #248, r2"); // enter LPM4
 
             // now the event should have passed, isr cleared flags and left GIE enabled

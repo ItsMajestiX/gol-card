@@ -56,7 +56,8 @@ pub fn markComplete() void {
     pending += State.width / 8;
     if (stall) {
         stall = false;
-        msp.eusci.setTXInt(true); // this should immidiately trigger an interrupt
+        //msp.eusci.setTXInt(true); // this should immidiately trigger an interrupt
+        imageFetchData();
     }
 }
 
@@ -104,7 +105,8 @@ pub fn markAllComplete() void {
     // If interrupted here, would take the new data (cannot be stalled, as that would disable interrupts).
     if (stall) {
         stall = false;
-        msp.eusci.setTXInt(true); // this should immidiately trigger an interrupt
+        //msp.eusci.setTXInt(true); // this should immidiately trigger an interrupt
+        imageFetchData();
     }
 }
 

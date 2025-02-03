@@ -132,7 +132,7 @@ pub fn initSPI() void {
     // 2. configure registers
     // set this first to prevent batching writes to the status register
     UCB0CTLW0.UCSYNC = .SYNC;
-    UCB0BRW.* = 0; // Disable divider, already predivided to 2MHz
+    UCB0BRW.* = 2; // Disable divider, already predivided to 2MHz
     UCB0CTLW0.UC7BIT = false;
     UCB0CTLW0.UCCKPL = .InactiveLow;
     UCB0CTLW0.UCCKPH = .CaptureChange;
@@ -194,12 +194,13 @@ pub noinline fn __interrupt_vector_usci_b0() callconv(.C) void {
             @branchHint(.unlikely);
             // Make sure CPU wakes up from LPM0 if it is currently set
             asm volatile ("bic #16, 6(r1)"); // unset the CPUOFF bit, but keep GIE set
-            msp.eusci.setTXInt(false); // will need to disable or it will keep triggering
+            //msp.eusci.setTXInt(false); // will need to disable or it will keep triggering
         }
     } else {
         UCB0TXBUF.* = @as(u16, to_send[0]);
         to_send = to_send[1..];
     }
+    UCB0IFG.UCRXIFG = false; // disable interrupt, will be triggered once next byte is done transmitting
     asm volatile (
         \\pop r14
         \\pop r13
@@ -208,25 +209,19 @@ pub noinline fn __interrupt_vector_usci_b0() callconv(.C) void {
     );
 }
 
-pub fn setTXInt(enable: bool) void {
-    UCB0IE.UCTXIE = enable;
+// pub fn setTXInt(enable: bool) void {
+//     UCB0IE.UCTXIE = enable;
+// }
+
+pub fn setRXInt(enable: bool) void {
+    UCB0IE.UCRXIE = enable;
 }
 
 /// Begins sending a slice. Will block until no more data can be sent.
 /// If data runs out, will call fetchData.
 pub fn sendSlice(new_slice: []const u8) void {
-    var temp_slice = new_slice;
-    while (UCB0IFG.UCTXIFG) {
-        // do this check first to avoid accessing undefined memory
-        if (temp_slice.len == 0) {
-            @branchHint(.unlikely);
-            fetch_data();
-            return;
-        }
-        UCB0TXBUF.* = @as(u16, temp_slice[0]);
-        temp_slice = temp_slice[1..];
-    }
-    to_send = temp_slice;
+    UCB0TXBUF.* = @as(u16, new_slice[0]);
+    to_send = new_slice[1..];
 }
 
 /// Places data into the TX buffer and waits for it to be clear.
