@@ -154,10 +154,9 @@ pub fn refresh() void {
     msp.eusci.sendDataSync(0x17); // refresh sequence
     pins.ePD_DataCommand.setPin(true); // data mode
     msp.eusci.sendDataSync(0xA5);
-    //msp.busyWait(10); // make sure the pin is set before busy waiting
+    msp.busyWait(1); // make sure the pin is set before busy waiting
     msp.eusci.enableSWReset(true); // disable the SPI for now
-    //pins.ePD_Busy.waitForChange(.LowToHigh); // go to LPM4 until the display is done
-    msp.busyWait(6000);
+    pins.ePD_Busy.waitForChange(.LowToHigh); // go to LPM4 until the display is done
     msp.eusci.enableSWReset(false);
 }
 
