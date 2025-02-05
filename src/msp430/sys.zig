@@ -11,13 +11,13 @@ pub fn setProgramProtection(enable: bool) void {
 }
 
 pub fn setDataProtection(enable: bool) void {
-    SYSCFG0.* = (0xA50 << 4) | (@intFromBool(enable) << 1) | (SYSCFG0.* & 0x0001);
+    SYSCFG0.* = (0xA50 << 4) | (@as(u16, @intFromBool(enable)) << 1) | (SYSCFG0.* & 0x0001);
 }
 
 pub fn setAnalogEnabled(pin: u3, enable: bool) void {
     if (enable) {
-        SYSCFG2.* |= (1 << pin);
+        SYSCFG2.* |= (@as(u8, 1) << pin);
     } else {
-        SYSCFG2.* &= ~(1 << pin);
+        SYSCFG2.* &= ~(@as(u8, 1) << pin);
     }
 }

@@ -16,6 +16,8 @@ comptime {
 }
 var state: State = State{};
 
+var rand: *u256 = @ptrFromInt(0x1800); // Information memory
+
 pub fn preUpdate() *State {
     // start the 16MHz clock
     msp.watchdog.disableWatchdog();
@@ -37,6 +39,12 @@ pub fn preUpdate() *State {
     pins.ePD_Busy.setPin(true); // when in input mode, true sets pullup resistor
     pins.ePD_Busy.setResistor(true); // enable the resistor
 
+    // get bit of entropy, add to data
+    msp.sys.setDataProtection(false);
+    rand.* <<= 1;
+    rand.* |= msp.adc.getNoise();
+    msp.sys.setDataProtection(true);
+
     // set up the display
     display.initDisplay();
 
@@ -45,7 +53,6 @@ pub fn preUpdate() *State {
     msp.enableInterrupts();
     msp.nop();
 
-    // TODO: get bit of entropy, add to data
     msp.crc.initCRC();
     msp.sys.setProgramProtection(false);
 
@@ -95,9 +102,7 @@ pub fn postUpdate() void {
 }
 
 pub fn getSeed() [4]u64 {
-    // TODO: get randomness from buffer
-    // these numbers are just from random.org
-    return [_]u64{ 0xc2451be228028070, 0x31ce18a61da15b31, 0x5277280f86c833b5, 0xe698297d615233c9 };
+    return @as(*[4]u64, @ptrCast(rand)).*;
 }
 
 pub fn markAllComplete() void {
