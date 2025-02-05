@@ -1,9 +1,12 @@
 const msp = @import("./msp430.zig");
 
-// manually controlled
+// manually controlled DIO
 pub const ePD_Reset = msp.dio.Pin(msp.dio.Port3, 1);
 pub const ePD_DataCommand = msp.dio.Pin(msp.dio.Port2, 2);
 pub const ePD_Busy = msp.dio.Pin(msp.dio.Port2, 7);
+
+// manually controlled analog
+pub const ADC_Random: u3 = 4; // Pin 4
 
 // controlled by eUSCI module
 pub const ePD_CS = msp.dio.Pin(msp.dio.Port1, 0);

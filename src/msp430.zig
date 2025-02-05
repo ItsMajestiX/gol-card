@@ -1,3 +1,4 @@
+pub const adc = @import("./msp430//adc.zig");
 pub const crc = @import("./msp430/crc.zig");
 pub const cs = @import("./msp430/cs.zig");
 pub const dio = @import("./msp430/dio.zig");
