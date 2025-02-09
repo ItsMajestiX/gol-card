@@ -5,6 +5,7 @@ pub const dio = @import("./msp430/dio.zig");
 pub const eusci = @import("./msp430/eusci.zig");
 pub const fram = @import("./msp430/fram.zig");
 pub const pmm = @import("./msp430/pmm.zig");
+pub const rtc = @import("./msp430/rtc.zig");
 pub const sys = @import("./msp430/sys.zig");
 pub const watchdog = @import("./msp430/watchdog.zig");
 

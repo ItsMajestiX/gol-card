@@ -142,6 +142,7 @@ pub fn setClock16MHz() void {
     // 3. clear CSCTL 0
     CSCTL0.* = 0;
     // 4. DCO range, and FLL fraction
+    CSCTL1.DCOFTRIMEN = false;
     CSCTL1.DCORSEL = 5; // 16MHz range
     CSCTL1.DISMOD = false; // disable modulation = false (enable)
     CSCTL2.FLLN = 487; // 32768 Hz * (487 + 1) is about 16MHz
@@ -154,6 +155,7 @@ pub fn setClock16MHz() void {
     enableFLL();
     // wait to stabilize
     while (CSCTL7.FLLUNLOCK != 0) {}
+    // set SMClock to 2Mhz
     CSCTL5.DIVS = .@"8";
 }
 

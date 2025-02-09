@@ -19,13 +19,15 @@ var state: State = State{};
 var rand: *u256 = @ptrFromInt(0x1800); // Information memory
 
 pub fn preUpdate() *State {
+    // reset RTC to pre-sleep state
+    msp.rtc.startRTC();
+    // initialize IO pins
+    msp.dio.resetAll();
+
     // start the 16MHz clock
     msp.watchdog.disableWatchdog();
     msp.fram.setFRAMWaitStateEnabled(true);
     msp.cs.setClock16MHz();
-
-    // initialize IO pins
-    msp.dio.resetAll();
 
     // SPI setup
     msp.eusci.initSPI();
@@ -87,6 +89,8 @@ pub fn postUpdate() void {
     if (!complete) {
         asm volatile ("bis #24, sr"); // from TI manual, similtaneously enable interrupts and shut off CPU
         msp.nop();
+        msp.disableInterrupts(); // shutdown code expects interrupts to be disabled
+        msp.nop();
     }
 
     // when we reach this point the tx interrupt will be off so we don't need to worry about interrupts
@@ -99,6 +103,20 @@ pub fn postUpdate() void {
 
     display.refresh();
     display.powerOff();
+
+    // Go to sleep for 5 minutes
+    // Procedure taken from TI manual.
+    // Shut down the SPI module
+    msp.eusci.enableSWReset(true);
+    // Reset all GPIO
+    msp.dio.resetAll();
+    // Configure the RTC and enable its interrupt
+    msp.rtc.startRTC();
+    msp.rtc.enableRTCInt();
+    // Watchdog already disabled, interrupts already disabled
+    msp.pmm.prepareLPM5();
+    asm volatile ("bis #240, r2"); // enter LPM3.5. GIE is not set here, but that is what TI says...
+    unreachable;
 }
 
 pub fn getSeed() [4]u64 {
