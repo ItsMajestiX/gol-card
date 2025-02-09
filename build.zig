@@ -425,6 +425,11 @@ pub fn build(b: *std.Build) !void {
     const test_step = b.step("test", "Run unit tests");
     test_step.dependOn(&run_exe_unit_tests.step);
 
+    // get CPU to be used when building embedded
+    const mcu = b.option(MCUType, "mmcu", "The MCU to build for. This adjust the linker scripts. Default ???") orelse MCUType.msp430fr2433;
+    const options_step = b.addOptions();
+    options_step.addOption(MCUType, "mcu", mcu);
+
     // options for MSP430 build
     const target_msp430_query = std.Target.Query.parse(std.Target.Query.ParseOptions{
         .arch_os_abi = "msp430-freestanding",
@@ -438,6 +443,7 @@ pub fn build(b: *std.Build) !void {
         .target = target_msp430,
         .optimize = optimize_msp430,
     });
+    build_object.root_module.addOptions("config", options_step);
     // var genFile = std.Build.GeneratedFile{ .step = &build_object.step };
     // build_object.generated_asm = &genFile;
 
@@ -457,7 +463,6 @@ pub fn build(b: *std.Build) !void {
     // Toolchain management
     // Build toolchainxedFileArg("", lp: std.Build.LazyPath)
     const maybe_toolchain = try createInstallBuildToolchain(b, &target_desktop, &optimize_desktop);
-    const mcu = b.option(MCUType, "mmcu", "The MCU to build for. This adjust the linker scripts. Default ???") orelse MCUType.msp430fr2433;
 
     const gcc_args = [_][]const u8{ "./msp430-gcc-9.3.1.11_linux64/bin/msp430-elf-gcc", "-L=./msp430-gcc-9.3.1.11_linux64/include", "-g", "-ogol_card.elf" };
     const gcc_embedded = b.addSystemCommand(&gcc_args);

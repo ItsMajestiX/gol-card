@@ -1,3 +1,4 @@
+const config = @import("config");
 const RTCCounterControlRegister = packed struct(u16) {
     const PredividerValue = enum(u3) {
         @"1" = 0,
@@ -44,7 +45,10 @@ pub fn startRTC() void {
     _ = RTCIV.*;
     // Set values in the control registers
     RTCCTL.RTCPS = .@"100";
-    RTCMOD.* = 21429; // 5 minutes? (Setting it to 30000 waits *exactly* seven minutes for some reason)
+    RTCMOD.* = switch (config.mcu) {
+        .msp430fr2433 => 21429, // 30000 is exactly 7 minutes
+        else => 25959, // 21429 is about 247.65 seconds
+    };
     RTCCTL.RTCSS = .VLOCLK;
     RTCCTL.RTCSR = true;
 }

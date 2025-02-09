@@ -1,6 +1,7 @@
 const Pins = @import("../pins.zig");
 const msp = @import("../msp430.zig");
 const std = @import("std");
+const config = @import("config");
 
 const eUSCIBxControlRegisterZero = packed struct(u16) {
     pub const STEMode = enum(u1) {
@@ -172,12 +173,24 @@ var fetch_data: *const fn () void = undefined;
 
 comptime {
     const int_ptr = &__interrupt_vector_usci_b0;
-    @export(&int_ptr, .{
-        .name = "spi_int",
-        .section = "__interrupt_vector_usci_b0",
-        .linkage = .strong,
-        .visibility = .default,
-    });
+    switch (config.mcu) {
+        .msp430fr2433 => {
+            @export(&int_ptr, .{
+                .name = "spi_int",
+                .section = "__interrupt_vector_usci_b0",
+                .linkage = .strong,
+                .visibility = .default,
+            });
+        },
+        else => {
+            @export(&int_ptr, .{
+                .name = "spi_int",
+                .section = "__interrupt_vector_eusci_b0",
+                .linkage = .strong,
+                .visibility = .default,
+            });
+        },
+    }
 }
 
 pub noinline fn __interrupt_vector_usci_b0() callconv(.C) void {
