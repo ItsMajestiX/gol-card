@@ -1,6 +1,8 @@
 const PowerMode5ControlRegister0 = packed struct(u8) {
+    /// Controls hold of LPMx.5 state.
     LOCKLPM5: bool,
     _unused1: u3,
+    /// Current state of the LPMx.5 switch
     LPM5SW: bool,
     // There is another flag available for the MSP430FR2433.
     // It shoudn't need to be changed, so it is marked as unused.
@@ -40,7 +42,9 @@ pub fn setLOCKLPM5(lock: bool) void {
 pub fn prepareLPM5() void {
     // unlock registers
     PMMCTL0_H.* = 0xA5;
+    // set to enter LPMx.5 on sleep
     PMMCTL0_L.PMMREGOFF = true;
+    // disable SVS on sleep
     PMMCTL0_L.SVSHE = false;
     // lock registers
     PMMCTL0_H.* = 0x00;

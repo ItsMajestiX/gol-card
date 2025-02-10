@@ -106,17 +106,26 @@ const CSCTL5: *volatile ClockSystemControlRegister5 = @extern(*volatile ClockSys
 });
 
 const ClockSystemControlRegister7 = packed struct(u16) {
+    /// DCO fault flag. Can be reset by writing false.
     DCOFFG: bool,
+    /// XT1 fault flag. Can be reset by writing false.
     XT1OFFG: bool,
+    /// True when REFO is ready for use.
     REFOREADY: bool,
     _unused1: u1,
+    /// FLL unlock interrupt flag.
     FLLULIFG: bool,
     _unused2: u1,
+    /// Enables/disables the XT1 start count.
     ENSTFCNT1: bool,
     _unused3: u1,
+    /// Current status of the FLL.
     FLLUNLOCK: u2,
+    /// Sticky bits indicating previous statuses of the FLL.
     FLLUNLOCKHIS: u2,
+    /// If true, a PUC is generated when FLLUIFG is set.
     FLLULPUC: bool,
+    // Enables the FLL history interrupt.
     FLLWARNEN: bool,
     _unused4: u2,
 };

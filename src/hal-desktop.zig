@@ -21,7 +21,9 @@ pub fn preUpdate() *State {
     if (texture == null) {
         texture = rl.loadTextureFromImage(img);
     }
+    // This CRC matches the one on the MCU
     crc = std.hash.crc.Crc16Ibm3740.init();
+    // Open/create file.
     if (fileHandle == null) {
         fileHandle = std.fs.cwd().openFile("state.bin", std.fs.File.OpenFlags{ .mode = .read_write }) catch |err| handleErr: {
             switch (err) {

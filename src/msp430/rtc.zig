@@ -16,14 +16,18 @@ const RTCCounterControlRegister = packed struct(u16) {
         XT1CLK = 2,
         VLOCLK = 3,
     };
-
+    /// RTC interrupt flag.
     RTCIFG: bool,
+    /// Enables the RTC interrupt.
     RTCIE: bool,
     _unused1: u4,
+    /// When true, resets the RTC and copies the new timer value to the shadow register.
     RTCSR: bool,
     _unused2: u1,
+    /// RTC clock predivider.
     RTCPS: PredividerValue,
     _unused3: u1,
+    /// RTC clock source.
     RTCSS: ClockSource,
     _unused4: u2,
 };

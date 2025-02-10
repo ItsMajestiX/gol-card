@@ -195,13 +195,15 @@ pub fn step() void {
     //const board: []u8 = hal.loadBoard();
     //defer hal.saveBoard(board);
     if (state.reset_next) {
+        // Randomize the board and reset
         randomizeBoard(&state.board);
         state.reset_next = false;
         state.step_count = 0;
     } else {
         state.step_count += 1;
-        const max_steps = 4032; // two weeks
+        const max_steps = 4032; // two weeks @ five minutes per step
         updateBoard(&state.board);
+        // check for a loop
         state.reset_next = (state.step_count >= max_steps) or blk: {
             const current_crc = hal.getCRC();
             for (state.past_crc) |past_crc| {
