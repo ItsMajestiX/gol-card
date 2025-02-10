@@ -7,19 +7,19 @@
 - [x] ~~Break off state save/load into a HAL. [12-14-24]~~
 - [x] ~~Break off display interaction into a HAL. [12-14-24]~~
 - [x] ~~Separate a single state update into a function that can be called either on msp430 or by the simulator. [12-14-24]~~
-- [ ] Create a build process for the MSP430.
+- [x] Create a build process for the MSP430. [[12-30-24]]
 when this step is done, the step function should contain no I/O except through the HAL
 # Step 2: Hardware Prototyping
-- [ ] Based on the simulator, choose an appropriate MSP430 processor
+- [x] Based on the simulator, choose an appropriate MSP430 processor [[12-22-24]]
 	- MSP430FR2433, has 16kB (bytes)
-- [ ] Constrain the simulator to run within the amount of memory the processor has
+- [x] Constrain the simulator to run within the amount of memory the processor has
 - [x] ~~Produce MSP430 assembly from the program. [12-22-24]~~
 - [x] ~~Order necessary parts. [12-22-24]~~
-- [ ] Set up bootstrap code for MSP430
-- [ ] Implement sending/recieving data (state, display)
-- [ ] Move state to hardware
-- [ ] Move step time to hardware
-- [ ] Implement eInk interface (will take a while, API may need to be restructured)
+- [x] Set up bootstrap code for MSP430
+- [x] Implement sending/recieving data (state, display)
+- [x] Move state to hardware [[1-7-25]]
+- [x] Move step time to hardware [[2-9-25]]
+- [x] Implement eInk interface (will take a while, API may need to be restructured) [[2-4-25]]
 when this step is complete, all desired functionality should be complete, just not in the correct form factor
 
 # Step 3: Hardware Design
