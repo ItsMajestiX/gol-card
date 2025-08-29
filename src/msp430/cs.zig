@@ -1,4 +1,5 @@
 const msp = @import("../msp430.zig");
+const pins = @import("../pins.zig");
 
 const CSCTL0: *volatile u16 = @extern(*volatile u16, .{
     .name = "CSCTL0",
@@ -164,7 +165,7 @@ pub fn setClock16MHz() void {
     enableFLL();
     // wait to stabilize
     while (CSCTL7.FLLUNLOCK != 0) {}
-    // set SMClock to 2Mhz
+    // set SMClock to 2MHz
     CSCTL5.DIVS = .@"8";
 }
 
@@ -174,4 +175,14 @@ pub fn getMCLKSource() ClockSystemControlRegister4.MCLKSource {
 
 pub fn setMCLKSource(source: ClockSystemControlRegister4.MCLKSource) void {
     CSCTL4.SELMS = source;
+}
+
+pub fn resetXtalFlags() void {
+    const CSCTL7_reg = @as(*volatile u16, @ptrCast(CSCTL7));
+    CSCTL7_reg.* &= 0xFFFC;
+}
+
+pub fn setXtalPins() void {
+    pins.XIN.setMode(.Primary);
+    pins.XOUT.setMode(.Primary);
 }

@@ -9,3 +9,5 @@ binutils*
 E-Paper_code
 gol_card.s
 gol_card.elf
+gol_card_pcb
+dis.txt

@@ -48,12 +48,13 @@ pub fn startRTC() void {
     // Reset the interrupt
     _ = RTCIV.*;
     // Set values in the control registers
-    RTCCTL.RTCPS = .@"100";
-    RTCMOD.* = switch (config.mcu) {
-        .msp430fr2433 => 21429, // 30000 is exactly 7 minutes
-        else => 25959, // 21429 is about 247.65 seconds
-    };
-    RTCCTL.RTCSS = .VLOCLK;
+    RTCCTL.RTCPS = .@"256";
+    RTCMOD.* = 38400; // 128 * 60 * 5, xtal should be much more accurate than VLO
+    RTCCTL.RTCSS = .XT1CLK;
+    RTCCTL.RTCSR = true;
+}
+
+pub fn resetRTC() void {
     RTCCTL.RTCSR = true;
 }
 

@@ -41,12 +41,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "README.md",
+                "file": "daily/11-30-24.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "README"
+              "title": "11-30-24"
             }
           }
         ],
@@ -212,8 +212,9 @@
   },
   "active": "85b17aa66298f70a",
   "lastOpenFiles": [
-    "Zig.md",
+    "daily/11-27-24.md",
     "README.md",
+    "Zig.md",
     "daily/2-4-25.md",
     "Early Planning Note.md",
     "Project Outline.md",
@@ -227,7 +228,6 @@
     "daily/12-7-24.md",
     "daily/12-3-24.md",
     "daily/11-30-24.md",
-    "daily/11-27-24.md",
     "img/first_img.jpg",
     "img/Pasted image 20241130232126.png",
     "img",

@@ -21,8 +21,21 @@ var rand: *u256 = @ptrFromInt(0x1800); // Information memory
 pub fn preUpdate() *State {
     // reset RTC to pre-sleep state
     msp.rtc.startRTC();
-    // initialize IO pins
+    // reset IO regs
     msp.dio.resetAll();
+
+    // switch clock pins to clock mode
+    msp.cs.setXtalPins();
+    // need to enter reset loop untill crystal stablizes
+    // we can leave the watchdog on to reset if something goes wrong
+    // have ~32ms minus execution time of above to do this
+    while (msp.sys.getOscillatorFaultFlag()) {
+        msp.cs.resetXtalFlags();
+        msp.sys.clearOscillatorFaultFlag();
+    }
+
+    // now the LOCKLPM5 reg can be cleared
+    msp.pmm.setLOCKLPM5(false);
 
     // start the 16MHz clock
     msp.watchdog.disableWatchdog();
@@ -46,6 +59,11 @@ pub fn preUpdate() *State {
     rand.* <<= 1;
     rand.* |= msp.adc.getNoise();
     msp.sys.setDataProtection(true);
+
+    // turn on switching power supply before using display
+    pins.EN_BYP.setPin(true);
+    // wait to stabilize
+    msp.busyWait(1);
 
     // set up the display
     display.initDisplay();
@@ -79,7 +97,6 @@ pub fn getCRC() u16 {
 }
 
 pub fn postUpdate() void {
-    // TODO: lots of stuff, will go into a lesser sleep while SPI finishes
     msp.sys.setProgramProtection(true);
 
     // If an interrupt happens that sets complete to true after we check it, we will softlock
@@ -104,14 +121,20 @@ pub fn postUpdate() void {
     display.refresh();
     display.powerOff();
 
+    // turn off switching power supply after using display
+    pins.EN_BYP.setPin(false);
+    // wait to stabilize
+    msp.busyWait(1);
+
     // Go to sleep for 5 minutes
     // Procedure taken from TI manual.
     // Shut down the SPI module
     msp.eusci.enableSWReset(true);
-    // Reset all GPIO
-    msp.dio.resetAll();
-    // Configure the RTC and enable its interrupt
-    msp.rtc.startRTC();
+    // Reset all GPIO, except for the clock
+    msp.dio.resetAllButXtal();
+    // Reset the RTC timer
+    msp.rtc.resetRTC();
+    // Enable the RTC interrupt
     msp.rtc.enableRTCInt();
     // Watchdog already disabled, interrupts already disabled
     msp.pmm.prepareLPM5();
