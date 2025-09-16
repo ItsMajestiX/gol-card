@@ -10,7 +10,7 @@
     "postProcess": true,
     "displayProgress": true,
     "inlineHTML": false,
-    "exportPath": "/home/majestix/Documents/projects/gol_card/gol_card_docs/website",
+    "exportPath": "/home/majestix/Documents/projects/gol_card/website",
     "filesToExport": [],
     "useFallbackRenderer": false,
     "addBodyClasses": true,
