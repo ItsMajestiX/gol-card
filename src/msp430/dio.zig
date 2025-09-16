@@ -189,5 +189,9 @@ pub fn resetAll() void {
     Port1.reset();
     Port2.reset();
     Port3.reset();
-    msp.pmm.setLOCKLPM5(false);
+}
+
+pub fn resetAllButXtal() void {
+    Port1.reset();
+    Port3.reset();
 }

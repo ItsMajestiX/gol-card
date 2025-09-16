@@ -3,7 +3,7 @@ const msp = @import("../msp430.zig");
 const std = @import("std");
 const config = @import("config");
 
-const eUSCIBxControlRegisterZero = packed struct(u16) {
+const eUSCIControlRegisterZero = packed struct(u16) {
     pub const STEMode = enum(u1) {
         PreventConflict = 0,
         EnableSlave = 1,
@@ -59,15 +59,23 @@ const eUSCIBxControlRegisterZero = packed struct(u16) {
     UCCKPH: eUSCIClockPhase,
 };
 
-const UCB0CTLW0: *volatile eUSCIBxControlRegisterZero = @extern(*volatile eUSCIBxControlRegisterZero, .{
+const UCB0CTLW0: *volatile eUSCIControlRegisterZero = @extern(*volatile eUSCIControlRegisterZero, .{
     .name = "UCB0CTLW0",
+});
+
+const UCA0CTLW0: *volatile eUSCIControlRegisterZero = @extern(*volatile eUSCIControlRegisterZero, .{
+    .name = "UCA0CTLW0",
 });
 
 const UCB0BRW: *volatile u16 = @extern(*volatile u16, .{
     .name = "UCB0BRW",
 });
 
-const eUSCIBxStatusRegister = packed struct(u16) {
+const UCA0BRW: *volatile u16 = @extern(*volatile u16, .{
+    .name = "UCA0BRW",
+});
+
+const eUSCIStatusRegister = packed struct(u16) {
     /// Whether or not the module is sending or receving data.
     UCBUSY: bool,
     _unused1: u4,
@@ -80,19 +88,31 @@ const eUSCIBxStatusRegister = packed struct(u16) {
     _unused2: u8,
 };
 
-const UCB0STATW: *volatile eUSCIBxStatusRegister = @extern(*volatile eUSCIBxStatusRegister, .{
+const UCB0STATW: *volatile eUSCIStatusRegister = @extern(*volatile eUSCIStatusRegister, .{
     .name = "UCB0STATW",
+});
+
+const UCA0STATW: *volatile eUSCIStatusRegister = @extern(*volatile eUSCIStatusRegister, .{
+    .name = "UCA0STATW",
 });
 
 const UCB0RXBUF: *volatile u16 = @extern(*volatile u16, .{
     .name = "UCB0RXBUF",
 });
 
+const UCA0RXBUF: *volatile u16 = @extern(*volatile u16, .{
+    .name = "UCA0RXBUF",
+});
+
 const UCB0TXBUF: *volatile u16 = @extern(*volatile u16, .{
     .name = "UCB0TXBUF",
 });
 
-const eUSCIBxInterruptEnable = packed struct(u16) {
+const UCA0TXBUF: *volatile u16 = @extern(*volatile u16, .{
+    .name = "UCA0TXBUF",
+});
+
+const eUSCIInterruptEnable = packed struct(u16) {
     /// Enables or disables the recieve interrupt.
     UCRXIE: bool,
     /// Enables or disables the transmit interrupt.
@@ -100,11 +120,15 @@ const eUSCIBxInterruptEnable = packed struct(u16) {
     _unused1: u14,
 };
 
-const UCB0IE: *volatile eUSCIBxInterruptEnable = @extern(*volatile eUSCIBxInterruptEnable, .{
+const UCB0IE: *volatile eUSCIInterruptEnable = @extern(*volatile eUSCIInterruptEnable, .{
     .name = "UCB0IE",
 });
 
-const eUSCIBxInterruptFlags = packed struct(u16) {
+const UCA0IE: *volatile eUSCIInterruptEnable = @extern(*volatile eUSCIInterruptEnable, .{
+    .name = "UCA0IE",
+});
+
+const eUSCIInterruptFlags = packed struct(u16) {
     /// True if a receive interrupt is pending.
     UCRXIFG: bool,
     /// True if a transmit interrupt is pending.
@@ -112,18 +136,26 @@ const eUSCIBxInterruptFlags = packed struct(u16) {
     _unused1: u14,
 };
 
-const UCB0IFG: *volatile eUSCIBxInterruptFlags = @extern(*volatile eUSCIBxInterruptFlags, .{
+const UCB0IFG: *volatile eUSCIInterruptFlags = @extern(*volatile eUSCIInterruptFlags, .{
     .name = "UCB0IFG",
 });
 
-const eUSCIBxInterruptVector = enum(u16) {
+const UCA0IFG: *volatile eUSCIInterruptFlags = @extern(*volatile eUSCIInterruptFlags, .{
+    .name = "UCA0IFG",
+});
+
+const eUSCIInterruptVector = enum(u16) {
     None = 0,
     Data_Recieved = 2,
     TXBUF_Empty = 4,
 };
 
-const UCB0IV: *volatile eUSCIBxInterruptVector = @extern(*volatile eUSCIBxInterruptVector, .{
+const UCB0IV: *volatile eUSCIInterruptVector = @extern(*volatile eUSCIInterruptVector, .{
     .name = "UCB0IV",
+});
+
+const UCA0IV: *volatile eUSCIInterruptVector = @extern(*volatile eUSCIInterruptVector, .{
+    .name = "UCA0IV",
 });
 
 pub fn initSPI() void {
@@ -132,15 +164,15 @@ pub fn initSPI() void {
 
     // 2. configure registers
     // set this first to prevent batching writes to the status register
-    UCB0CTLW0.UCSYNC = .SYNC;
-    UCB0BRW.* = 2; // Disable divider, already predivided to 2MHz
-    UCB0CTLW0.UC7BIT = false;
-    UCB0CTLW0.UCCKPL = .InactiveLow;
-    UCB0CTLW0.UCCKPH = .CaptureChange;
-    UCB0CTLW0.UCMODE0 = .FourPinActiveLow;
-    UCB0CTLW0.UCMST = true;
-    UCB0CTLW0.UCSSEL0 = 2; // SMCLK
-    UCB0CTLW0.UCSTEM = .EnableSlave;
+    UCA0CTLW0.UCSYNC = .SYNC;
+    UCA0BRW.* = 2; // Disable divider, already predivided to 2MHz
+    UCA0CTLW0.UC7BIT = false;
+    UCA0CTLW0.UCCKPL = .InactiveLow;
+    UCA0CTLW0.UCCKPH = .CaptureChange;
+    UCA0CTLW0.UCMODE0 = .FourPinActiveLow;
+    UCA0CTLW0.UCMST = true;
+    UCA0CTLW0.UCSSEL0 = 2; // SMCLK
+    UCA0CTLW0.UCSTEM = .EnableSlave;
     setSPIBitOrder(true); // set this for now
 
     // 3. configure ports
@@ -153,15 +185,15 @@ pub fn initSPI() void {
 }
 
 pub inline fn enableSWReset(rst: bool) void {
-    UCB0CTLW0.UCSWRST = rst;
+    UCA0CTLW0.UCSWRST = rst;
 }
 
 pub inline fn setSPIBitOrder(msb_first: bool) void {
-    UCB0CTLW0.UCMSB = msb_first;
+    UCA0CTLW0.UCMSB = msb_first;
 }
 
 pub inline fn busyWaitForComplete() void {
-    while (UCB0STATW.UCBUSY) {}
+    while (UCA0STATW.UCBUSY) {}
 }
 
 // SPI IRQ
@@ -172,12 +204,12 @@ var to_send: []const u8 = undefined;
 var fetch_data: *const fn () void = undefined;
 
 comptime {
-    const int_ptr = &__interrupt_vector_usci_b0;
+    const int_ptr = &__interrupt_vector_usci_a0;
     switch (config.mcu) {
         .msp430fr2433 => {
             @export(&int_ptr, .{
                 .name = "spi_int",
-                .section = "__interrupt_vector_usci_b0",
+                .section = "__interrupt_vector_usci_a0",
                 .linkage = .strong,
                 .visibility = .default,
             });
@@ -185,7 +217,7 @@ comptime {
         else => {
             @export(&int_ptr, .{
                 .name = "spi_int",
-                .section = "__interrupt_vector_eusci_b0",
+                .section = "__interrupt_vector_eusci_a0",
                 .linkage = .strong,
                 .visibility = .default,
             });
@@ -193,7 +225,7 @@ comptime {
     }
 }
 
-pub noinline fn __interrupt_vector_usci_b0() callconv(.C) void {
+pub noinline fn __interrupt_vector_usci_a0() callconv(.C) void {
     asm volatile (
         \\push r12
         \\push r13
@@ -210,10 +242,10 @@ pub noinline fn __interrupt_vector_usci_b0() callconv(.C) void {
             //msp.eusci.setTXInt(false); // will need to disable or it will keep triggering
         }
     } else {
-        UCB0TXBUF.* = @as(u16, to_send[0]);
+        UCA0TXBUF.* = @as(u16, to_send[0]);
         to_send = to_send[1..];
     }
-    UCB0IFG.UCRXIFG = false; // disable interrupt, will be triggered once next byte is done transmitting
+    UCA0IFG.UCRXIFG = false; // disable interrupt, will be triggered once next byte is done transmitting
     asm volatile (
         \\pop r15
         \\pop r14
@@ -228,20 +260,20 @@ pub noinline fn __interrupt_vector_usci_b0() callconv(.C) void {
 // }
 
 pub fn setRXInt(enable: bool) void {
-    UCB0IE.UCRXIE = enable;
+    UCA0IE.UCRXIE = enable;
 }
 
 /// Begins sending a slice. Will block until no more data can be sent.
 /// If data runs out, will call fetchData.
 pub fn sendSlice(new_slice: []const u8) void {
-    UCB0TXBUF.* = @as(u16, new_slice[0]);
+    UCA0TXBUF.* = @as(u16, new_slice[0]);
     to_send = new_slice[1..];
 }
 
 /// Places data into the TX buffer and waits for it to be clear.
 /// Useful when you need to switch between command and data in a byte.
 pub fn sendDataSync(data: u8) void {
-    UCB0TXBUF.* = @as(u16, data);
+    UCA0TXBUF.* = @as(u16, data);
     busyWaitForComplete();
 }
 

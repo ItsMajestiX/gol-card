@@ -1,0 +1,386 @@
+(kicad_sch
+	(version 20250114)
+	(generator "eeschema")
+	(generator_version "9.0")
+	(uuid "e60d5bf6-13c9-4eac-86d0-829b3a41090f")
+	(paper "A4")
+	(title_block
+		(title "Game of Life PCB Business Card")
+		(date "2025-08-29")
+		(rev "1.0")
+		(company "Adam Sura")
+	)
+	(lib_symbols)
+	(wire
+		(pts
+			(xy 157.48 109.22) (xy 168.91 109.22)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "0228f13f-f3f7-4d3b-84a1-16bca2eb91d8")
+	)
+	(wire
+		(pts
+			(xy 157.48 114.3) (xy 168.91 114.3)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "0e493a1a-0518-4489-9ed8-bf2ae46bff59")
+	)
+	(wire
+		(pts
+			(xy 118.11 100.33) (xy 144.78 100.33)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "22f7f56e-1901-4883-99e5-3b72b9a5bcd3")
+	)
+	(wire
+		(pts
+			(xy 157.48 106.68) (xy 168.91 106.68)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "5c3dd869-f86b-46d7-aece-222a1ea22d8d")
+	)
+	(wire
+		(pts
+			(xy 157.48 100.33) (xy 168.91 100.33)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "71f41a36-d983-46dd-b89a-5303db86bec2")
+	)
+	(wire
+		(pts
+			(xy 118.11 97.79) (xy 144.78 97.79)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "859976e6-8185-4b3e-b46f-ea5513cab56c")
+	)
+	(wire
+		(pts
+			(xy 157.48 111.76) (xy 168.91 111.76)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "bb0987ec-b735-4709-8a5b-9d582fcc3037")
+	)
+	(wire
+		(pts
+			(xy 157.48 102.87) (xy 168.91 102.87)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "fa8040cb-d5a2-4fab-bd43-cadb07e4115e")
+	)
+	(sheet
+		(at 168.91 99.06)
+		(size 12.7 16.51)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(stroke
+			(width 0.1524)
+			(type solid)
+		)
+		(fill
+			(color 0 0 0 0.0000)
+		)
+		(uuid "15446891-6fd4-4d81-b94d-311d434d2d9a")
+		(property "Sheetname" "FPC_Connector"
+			(at 168.91 98.3484 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left bottom)
+			)
+		)
+		(property "Sheetfile" "FPC_Connector.kicad_sch"
+			(at 168.91 116.1546 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+			)
+		)
+		(pin "CSB" input
+			(at 168.91 106.68 180)
+			(uuid "811f9064-2007-4ed1-8f38-0ed604ca2f35")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(pin "~{BUSY}" output
+			(at 168.91 102.87 180)
+			(uuid "f9aedb84-addb-4179-900e-8a6335653adc")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(pin "SCL" input
+			(at 168.91 111.76 180)
+			(uuid "0a9b9f07-5f85-43cc-8d87-6bd927976fe4")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(pin "DC" input
+			(at 168.91 109.22 180)
+			(uuid "46608e9a-5342-4d2c-a424-1840bc497134")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(pin "~{RST}" input
+			(at 168.91 100.33 180)
+			(uuid "2d08d54e-2612-4a2d-b262-4b60f693c410")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(pin "SDA" input
+			(at 168.91 114.3 180)
+			(uuid "3b9810b8-faa0-4d81-beb1-41f27a5fb19b")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(instances
+			(project "gol_card_pcb"
+				(path "/e60d5bf6-13c9-4eac-86d0-829b3a41090f"
+					(page "2")
+				)
+			)
+		)
+	)
+	(sheet
+		(at 105.41 96.52)
+		(size 12.7 5.08)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(stroke
+			(width 0.1524)
+			(type solid)
+		)
+		(fill
+			(color 0 0 0 0.0000)
+		)
+		(uuid "68f54ec9-4331-40b2-8456-fb9d62aeb600")
+		(property "Sheetname" "Battery_SwitchingReg"
+			(at 105.41 95.8084 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left bottom)
+			)
+		)
+		(property "Sheetfile" "Battery_SwitchingReg.kicad_sch"
+			(at 105.41 102.1846 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+			)
+		)
+		(pin "EN{slash}BYP" input
+			(at 118.11 97.79 0)
+			(uuid "07dcf497-c4f5-4d18-9360-0fea3f3a7b1b")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+		)
+		(pin "VOUT" output
+			(at 118.11 100.33 0)
+			(uuid "e82c27de-26c6-4613-973e-d3757bb31780")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+		)
+		(instances
+			(project "gol_card_pcb"
+				(path "/e60d5bf6-13c9-4eac-86d0-829b3a41090f"
+					(page "3")
+				)
+			)
+		)
+	)
+	(sheet
+		(at 144.78 96.52)
+		(size 12.7 19.05)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(stroke
+			(width 0.1524)
+			(type solid)
+		)
+		(fill
+			(color 0 0 0 0.0000)
+		)
+		(uuid "cc598111-7297-467f-8dd9-e4bc9027dfc9")
+		(property "Sheetname" "MCU"
+			(at 144.78 95.8084 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left bottom)
+			)
+		)
+		(property "Sheetfile" "MCU.kicad_sch"
+			(at 144.78 116.1546 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+			)
+		)
+		(pin "SDA" output
+			(at 157.48 114.3 0)
+			(uuid "f26b2934-5fc7-476f-abfa-31b60ea01454")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+		)
+		(pin "SCL" output
+			(at 157.48 111.76 0)
+			(uuid "4b50116c-9a79-45e3-8d41-5d2b462f895d")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+		)
+		(pin "DC" output
+			(at 157.48 109.22 0)
+			(uuid "412fd33a-8fd0-421b-b0ad-390370147642")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+		)
+		(pin "~{BUSY}" input
+			(at 157.48 102.87 0)
+			(uuid "05eeac5a-fdcb-487d-a461-95bc124f0e66")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+		)
+		(pin "EN{slash}BYP" output
+			(at 144.78 97.79 180)
+			(uuid "835f4e8f-5bc9-4cc1-b390-525f34f4dcd4")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(pin "CSB" output
+			(at 157.48 106.68 0)
+			(uuid "588bb16f-7afb-45d6-9c45-9c4337cabe93")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+		)
+		(pin "~{RST}" output
+			(at 157.48 100.33 0)
+			(uuid "59dd3bbb-4a72-41e1-99e7-cc39374a7a8e")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+		)
+		(pin "VIN" input
+			(at 144.78 100.33 180)
+			(uuid "6acb293a-9ede-4efe-94cd-9886ca17d890")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(instances
+			(project "gol_card_pcb"
+				(path "/e60d5bf6-13c9-4eac-86d0-829b3a41090f"
+					(page "4")
+				)
+			)
+		)
+	)
+	(sheet_instances
+		(path "/"
+			(page "1")
+		)
+	)
+	(embedded_fonts no)
+)

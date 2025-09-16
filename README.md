@@ -1,11 +1,9 @@
 # Game of Life Card
-This project runs a finite version of Conway's Game of Life on some Texas Instruments MSP430 MCUs and displays it on an attached eInk display.
-
+A custom PCB that uses a TI MSP430 MCU to run a finite version of Conway's Game of Life on an ePaper display.
 # Documentation
 To read about the development of this project, please go to the `gol_card_docs` directory to find many markdown files documenting the development process of this project.
-
 # Building
-This project was built using commit `f857bf72e` of [Zig](https://github.com/ziglang/zig). You may use this version, but any newer version will likely work as well.
+This project can be built using commit `f857bf72e` of [Zig](https://github.com/ziglang/zig), but should work on Zig 0.14.0.
 
 After cloning this repository and its submodules, you will need to make a change to the `build.zig.zon` of raylib-zig. Change the lines specifying the raylib dependency to:
 ```
