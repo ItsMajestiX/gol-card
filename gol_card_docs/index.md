@@ -1,4 +1,4 @@
-This directory contains documentation for this project. It was written using [Obsidian](https://obsidian.md/). If you choose to view the markdown in the GitHub viewer, some Obsidian specific formatting will not render correctly. You can view this documentation as a website at ???
+This directory contains documentation for this project. It was written using [Obsidian](https://obsidian.md/). If you choose to view the markdown in the GitHub viewer, some Obsidian specific formatting will not render correctly. You can view this documentation as a website [here](https://itsmajestix.github.io/gol-card/).
 
 The following is a brief explanation of what documents can be found in this folder.
 
