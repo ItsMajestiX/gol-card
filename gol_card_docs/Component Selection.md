@@ -1,0 +1,22 @@
+Apart from a few passive components, the components on this board were carefully picked to meet the requirements of the project. Here are a few of the biggest ones:
+
+# [ePaper Display](https://www.waveshare.com/product/displays/e-paper/epaper-2/3.52inch-e-paper.htm)
+This component gave this project its start. I wanted to do an ePaper based business card, and I needed to pick an appropriate display. Ideal displays for me would be space efficient on a standard business card, have a breakout board I could purchase for easy development, and have a standalone module for the final board. This display met these criteria to a T. Almost exactly the size of a European business card and available in both raw module and breakout form, this display is exactly what I was looking for.
+
+I was debating between this display and a smaller one, but I settled on having more viewing area.
+# Microcontroller: [MSP430FR2433](https://www.ti.com/product/MSP430FR2433)
+After I had found a display for the project, I needed to choose a microcontroller to drive it.
+Since my primary concern was low power consumption, I made a search for common low power microcontrollers. This led me to discover the [MSP430](https://www.ti.com/product-category/microcontrollers-processors/msp430-mcus/overview.html) line of microcontrollers from Texas Instruments.
+
+Although I had considered using one of the increasingly popular STM32 line of microcontrollers as well as TI's newer ARM based microcontrollers, the classic MSP430 line had one major advantage: built in [FRAM](https://en.wikipedia.org/wiki/Ferroelectric_RAM) options. I needed a sizeable (~11kB) amount of nonvolatile memory to store the state of the board during the time the microcontroller would be asleep. Since I would be rewriting the entire region every five minutes, I did not want to use flash memory due to its high power consumption and low durability. After learning about FRAM I knew that it would be a perfect fit for this project. I initially planned to use an external FRAM chip to hold the data, but the MSP430FR series seemed like the perfect fit. 
+
+I eventually settled on two different microcontrollers: the 16kB MSP430FR2433 and the 32kB [MSP430FR2475](https://www.ti.com/product/MSP430FR2475). I ordered a breakout board with the 2433, but I had to order a breakout board of the 64kB [MSP430FR2476](https://www.ti.com/product/MSP430FR2476) as there was not a breakout board available for the smaller version. After learning my code and data could fit into 16kB, I moved ahead with the MSP430FR2433.
+
+If I had to redo this project, I would make sure to select a chip with a DMA module on it. Having to manually set up an interrupt to copy image data to the SPI module wastes CPU clock cycles and development time. TI does have MSP430FR series microcontrollers with a DMA module which would have been a better choice. I would also reevaluate the choice to use the MSP430 architecture at all. Although it is supported in Zig, its support is very experimental, only being able to output broken assembly files. Choosing a more supported architecture like ARM would have saved me a lot of time.
+
+# Boost Converter: [TPS61291](https://www.ti.com/product/TPS61291)
+Picking the above two components was enough for the first few months of the project, and led me to a working prototype. When it was time to design my own PCB, however, I needed to pick a lot more. The most pressing issue I faced was that the ePaper display drew too much power to run from a coin cell battery. In addition, I realized that a discharged coin cell battery would not meet even the minimum voltage requirement of the display. I did not want to move away from the coin cell, as I wanted to keep the battery user replaceable while being easy to find.
+
+Although I wanted to avoid adding a switching converter to the board due to the power loss and the extra complexity involved, there was no other viable option. I considered using a charge pump to double the battery voltage, but the voltages produced would need to be regulated down again, wasting more energy.
+
+I selected this chip due to its high efficiency, matching input voltage range, low external part count, and its pass through functionality. This allows me to directly power the microcontroller from the battery while it is asleep, resulting in power savings. The datasheet for the part also directly mentioned the use of 3V lithium batteries as an application, so it seemed like the right chip for the job.

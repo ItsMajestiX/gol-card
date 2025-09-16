@@ -9,5 +9,12 @@ binutils*
 E-Paper_code
 gol_card.s
 gol_card.elf
-gol_card_pcb
+gol_card_pcb/**/*
 dis.txt
+rand.bin
+
+!/gol_card_pcb/*.kicad_*
+!/gol_card_pcb/fp*
+!/gol_card_pcb/sym-lib-table
+!/gol_card_pcb/gol_card_fp.pretty**
+!/gol_card_pcb/graphic*

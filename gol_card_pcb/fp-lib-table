@@ -1,0 +1,4 @@
+(fp_lib_table
+  (version 7)
+  (lib (name "gol_card_fp")(type "KiCad")(uri "${KIPRJMOD}/gol_card_fp.pretty")(options "")(descr ""))
+)
