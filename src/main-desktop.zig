@@ -24,7 +24,7 @@ pub fn main() anyerror!void {
         rl.beginDrawing();
         defer rl.endDrawing();
         if (step) {
-            if (rl.isKeyPressed(rl.KeyboardKey.key_e)) {
+            if (rl.isKeyPressed(rl.KeyboardKey.e)) {
                 common.step();
             }
         } else {
@@ -34,12 +34,12 @@ pub fn main() anyerror!void {
             }
         }
         hal.postUpdate(); // again, this makes much more sense when running on an eInk
-        if (rl.isKeyPressed(rl.KeyboardKey.key_w)) {
+        if (rl.isKeyPressed(rl.KeyboardKey.w)) {
             if (selectedTime < (times.len - 1)) {
                 selectedTime += 1;
                 std.log.info("Time changed to {d} frames, {d} seconds", .{ times[selectedTime], times[selectedTime] / 60 });
             }
-        } else if (rl.isKeyPressed(rl.KeyboardKey.key_q)) {
+        } else if (rl.isKeyPressed(rl.KeyboardKey.q)) {
             if (selectedTime > 0) {
                 selectedTime -= 1;
                 std.log.info("Time changed to {d} frames, {d} seconds", .{ times[selectedTime], times[selectedTime] / 60 });
@@ -48,7 +48,7 @@ pub fn main() anyerror!void {
         if (!step) {
             frameCount += 1;
         }
-        if (rl.isKeyPressed(rl.KeyboardKey.key_p)) {
+        if (rl.isKeyPressed(rl.KeyboardKey.p)) {
             step = !step;
         } else {}
     }

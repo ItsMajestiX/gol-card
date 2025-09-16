@@ -7,7 +7,7 @@ const width = @import("./state.zig").State.width;
 const height = @import("./state.zig").State.height;
 
 var framebuffer: [width * height]u8 = undefined;
-const img = rl.Image{ .data = &framebuffer, .format = rl.PixelFormat.pixelformat_uncompressed_grayscale, .height = height, .width = width, .mipmaps = 1 };
+const img = rl.Image{ .data = &framebuffer, .format = rl.PixelFormat.uncompressed_grayscale, .height = height, .width = width, .mipmaps = 1 };
 var texture: ?rl.Texture = null;
 
 var fileHandle: ?std.fs.File = null;
@@ -19,7 +19,9 @@ var state: State = State{};
 pub fn preUpdate() *State {
     current_row = 0;
     if (texture == null) {
-        texture = rl.loadTextureFromImage(img);
+        texture = rl.loadTextureFromImage(img) catch {
+            @panic("Could not load board");
+        };
     }
     // This CRC matches the one on the MCU
     crc = std.hash.crc.Crc16Ibm3740.init();

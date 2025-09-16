@@ -1,5 +1,6 @@
 const std = @import("std");
 const builtin = @import("builtin");
+const rlz = @import("raylib_zig");
 
 const MCUType = enum {
     msp430fr2433,
@@ -375,9 +376,10 @@ pub fn build(b: *std.Build) !void {
     const target_desktop = b.standardTargetOptions(.{});
     const optimize_desktop = b.standardOptimizeOption(.{});
 
-    const raylib_dep = b.dependency("raylib-zig", .{
+    const raylib_dep = b.dependency("raylib_zig", .{
         .target = target_desktop,
         .optimize = optimize_desktop,
+        .linux_display_backend = rlz.LinuxDisplayBackend.X11,
     });
 
     const raylib = raylib_dep.module("raylib"); // main raylib module

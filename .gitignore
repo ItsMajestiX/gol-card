@@ -3,6 +3,7 @@ zig-out
 .vscode
 state.bin
 zig-master
+zig-x86_64-linux-0.14.1
 msp430-gcc*
 gol_card.o
 binutils*
