@@ -1,6 +1,0 @@
-[submodule "raylib-zig"]
-	path = raylib-zig
-	url = https://github.com/Not-Nik/raylib-zig.git
-[submodule "raylib"]
-	path = raylib
-	url = https://github.com/raysan5/raylib
